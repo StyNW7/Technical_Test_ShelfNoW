@@ -222,6 +222,54 @@ class ApiService {
   }
 
   // ===== ADMIN PRODUCT ENDPOINTS =====
+  // async createProduct(productData: CreateProductRequest): Promise<Product> {
+  //   return this.request<Product>('/products', {
+  //     method: 'POST',
+  //     body: JSON.stringify(productData),
+  //   });
+  // }
+
+  // async updateProduct(id: string, productData: UpdateProductRequest): Promise<Product> {
+  //   return this.request<Product>(`/products/${id}`, {
+  //     method: 'PATCH',
+  //     body: JSON.stringify(productData),
+  //   });
+  // }
+
+  // async deleteProduct(id: string): Promise<void> {
+  //   await this.request(`/products/${id}`, {
+  //     method: 'DELETE',
+  //   });
+  // }
+
+  // async updateStock(id: string, quantity: number): Promise<Product> {
+  //   return this.request<Product>(`/products/${id}/stock`, {
+  //     method: 'PATCH',
+  //     body: JSON.stringify({ quantity }),
+  //   });
+  // }
+
+  // async getAllProductsAdmin(
+  //   page: number = 1,
+  //   limit: number = 100,
+  //   category?: string,
+  //   search?: string
+  // ): Promise<ProductsResponse> {
+  //   const params = new URLSearchParams({
+  //     page: page.toString(),
+  //     limit: limit.toString(),
+  //     ...(category && { category }),
+  //     ...(search && { search }),
+  //   });
+
+  //   return this.request<ProductsResponse>(`/products/admin/all?${params}`);
+  // }
+
+  // async getProductAdmin(id: string): Promise<Product> {
+  //   return this.request<Product>(`/products/admin/${id}`);
+  // }
+
+
   async createProduct(productData: CreateProductRequest): Promise<Product> {
     return this.request<Product>('/products', {
       method: 'POST',
@@ -268,6 +316,7 @@ class ApiService {
   async getProductAdmin(id: string): Promise<Product> {
     return this.request<Product>(`/products/admin/${id}`);
   }
+
 
   // ===== ORDER ENDPOINTS =====
   async createOrder(orderData: any): Promise<any> {
