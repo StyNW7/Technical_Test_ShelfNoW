@@ -1,6 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -13,22 +13,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    console.log('JWT Payload:', payload);
+    // Your JWT payload structure from auth service
+    console.log('JWT Payload received:', payload);
     
     // Handle different possible payload structures
     const userId = payload.sub || payload.userId;
     const email = payload.email;
-    const role = payload.role || payload.roles?.[0];
+    const role = payload.role || payload.roles?.[0]; // Handle both 'role' and 'roles' array
 
-    if (!userId || !email || !role) {
+    if (!userId || !email) {
       console.error('Invalid token payload:', payload);
-      throw new UnauthorizedException('Invalid token payload');
+      return null;
     }
 
     return { 
       userId: userId.toString(), 
       email: email, 
-      role: role 
+      role: role || 'user' // Default role if not provided
     };
   }
 }

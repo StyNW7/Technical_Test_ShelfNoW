@@ -8,13 +8,8 @@ services:
     container_name: shelfnow_auth
     ports:
       - "3001:3001"
-    environment:
-      # - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_auth_db
-      # - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      # - JWT_EXPIRES_IN=3600
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+    env_file:
+      - ./backend/auth-service/.env
     depends_on:
       mysql:
         condition: service_healthy
@@ -30,11 +25,8 @@ services:
     container_name: shelfnow_product
     ports:
       - "3002:3002"
-    environment:
-      # - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_product_db
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+    env_file:
+      - ./backend/product-service/.env
     depends_on:
       mysql:
         condition: service_healthy
@@ -50,11 +42,8 @@ services:
     container_name: shelfnow_order
     ports:
       - "3003:3003"
-    environment:
-      # - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_order_db
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+    env_file:
+      - ./backend/order-service/.env
     depends_on:
       mysql:
         condition: service_healthy
@@ -71,7 +60,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - ./.env
+      - ./frontend/.env
     volumes:
       - ./Frontend:/app
       - /app/node_modules
@@ -86,10 +75,8 @@ services:
     container_name: shelfnow_gateway
     ports:
       - "3000:3000"  # Gateway is now the main entry point
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+    env_file:
+      - ./backend/api-gateway/.env
     depends_on:
       - auth-service
       - product-service
@@ -113,14 +100,15 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shelfnow_auth_db
     ports:
-      - "3307:3306"  # Changed from 3306:3306 to 3307:3306
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      timeout: 20s
+      timeout: 30s
       retries: 10
-      start_period: 30s
+      start_period: 40s
 
 volumes:
   mysql_data:
