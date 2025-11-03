@@ -21,7 +21,8 @@ import LoadingScreen from "./pages/Utility/LoadingScreen";
 // Pages
 
 import LandingPage from "@/pages/Landing/page";
-import AboutPage from "./pages/About/page";
+import LoginPage from "./pages/Auth/Login";
+import RegisterPage from "./pages/Auth/Register";
 
 function App() {
 
@@ -49,7 +50,8 @@ function App() {
             <Route path="/" element={<Layout />}>
               
                 <Route index element={<LandingPage/>} />
-                <Route path="/about" element={<AboutPage/>} />
+                <Route path="/login" element={<LoginPage/>} />
+                <Route path="/register" element={<RegisterPage/>} />
 
                 <Route path="*" element={<NotFoundPage />} />
 

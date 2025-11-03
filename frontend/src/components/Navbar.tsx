@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { Menu, X, ShoppingCart } from "lucide-react"
+import { useNavigate } from "react-router"
 
 export function Navbar() {
+
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
@@ -45,8 +48,8 @@ export function Navbar() {
               <ShoppingCart size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-black rounded-full"></span>
             </button>
-            <button className="px-6 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all duration-300 hover:bg-white hover:text-black">
-              Browse Books
+            <button className="px-6 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all duration-300 hover:bg-white hover:text-black" onClick={() => navigate("/login")}>
+              Login
             </button>
           </div>
 

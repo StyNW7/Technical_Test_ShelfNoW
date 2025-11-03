@@ -7,9 +7,9 @@ COPY prisma ./prisma/
 
 RUN npm install
 
-COPY . .
-
 RUN npx prisma generate
+
+COPY . .
 
 RUN npm run build
 
@@ -25,7 +25,7 @@ COPY prisma ./prisma/
 
 RUN npm install --only=production
 
-COPY . .
+RUN npx prisma generate
 
 COPY --from=development /usr/src/app/dist ./dist
 
