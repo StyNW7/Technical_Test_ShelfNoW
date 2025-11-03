@@ -20,39 +20,39 @@ services:
       - /usr/src/app/node_modules
     command: npm run start:dev
 
-  # product-service:
-  #   build: 
-  #     context: ./backend/product-service
-  #     target: development
-  #   container_name: shelfnow_product
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_product_db
-  #   depends_on:
-  #     mysql:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./backend/product-service:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   command: npm run start:dev
+  product-service:
+    build: 
+      context: ./backend/product-service
+      target: development
+    container_name: shelfnow_product
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_product_db
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend/product-service:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
 
-  # order-service:
-  #   build: 
-  #     context: ./backend/order-service
-  #     target: development
-  #   container_name: shelfnow_order
-  #   ports:
-  #     - "3003:3003"
-  #   environment:
-  #     - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_order_db
-  #   depends_on:
-  #     mysql:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./backend/order-service:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   command: npm run start:dev
+  order-service:
+    build: 
+      context: ./backend/order-service
+      target: development
+    container_name: shelfnow_order
+    ports:
+      - "3003:3003"
+    environment:
+      - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_order_db
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend/order-service:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
 
   frontend:
     build:
