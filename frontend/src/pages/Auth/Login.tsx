@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const { login } = useAuth();
 
   const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
@@ -15,16 +17,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiService.login({ email, password });
-      
-      // Store token in localStorage or context
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Redirect to dashboard or home page
-      window.location.href = '/dashboard';
+      await login(email, password);
+      window.location.href = '/admin';
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +78,7 @@ export default function LoginPage() {
           )}
 
           {/* Form */}
-          <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-900">
@@ -94,6 +90,7 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
                 className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
               />
             </div>
@@ -109,6 +106,7 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
                 className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
               />
             </div>
@@ -132,8 +130,7 @@ export default function LoginPage() {
 
             {/* Sign In Button */}
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
               disabled={isLoading}
               className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed animate-slide-up shadow-lg hover:shadow-xl"
               style={{ animationDelay: '0.5s' }}
@@ -147,7 +144,7 @@ export default function LoginPage() {
                 'Sign In'
               )}
             </button>
-          </div>
+          </form>
 
           {/* Sign Up Link */}
           <div className="mt-8 text-center text-sm text-gray-600 animate-fade-in" style={{ animationDelay: '0.6s' }}>
@@ -157,12 +154,6 @@ export default function LoginPage() {
             </a>
           </div>
         </div>
-
-        {/* Footer */}
-        {/* <div className="mt-8 text-center text-sm text-gray-500 animate-fade-in" style={{ animationDelay: '0.7s' }}>
-          © 2025 ShelfNoW. All rights reserved.
-        </div> */}
-
       </div>
     </div>
   );

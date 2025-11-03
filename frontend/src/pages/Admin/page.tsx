@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useMemo, useEffect } from 'react';
-import { BookOpen, Plus, Edit2, Trash2, Search, Package, Zap, Menu, X, Home } from 'lucide-react';
+import { BookOpen, Plus, Edit2, Trash2, Search, Package, Zap, Menu, X, Home, User, LogOut } from 'lucide-react';
 import BookForm from '@/components/admin/book-form';
 
 interface Book {
@@ -32,6 +32,58 @@ interface ApiResponse {
   };
 }
 
+// Mock data for demo purposes
+const mockBooks: Book[] = [
+  {
+    id: '1',
+    title: 'The Great Gatsby',
+    author: 'F. Scott Fitzgerald',
+    description: 'A classic novel about the American Dream',
+    isbn: '9780743273565',
+    price: 15.99,
+    stock: 25,
+    category: 'Fiction',
+    publisher: 'Scribner',
+    language: 'English',
+    pages: 180,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    title: 'To Kill a Mockingbird',
+    author: 'Harper Lee',
+    description: 'A story of racial injustice and childhood innocence',
+    isbn: '9780061120084',
+    price: 18.99,
+    stock: 8,
+    category: 'Fiction',
+    publisher: 'J.B. Lippincott & Co.',
+    language: 'English',
+    pages: 281,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    title: '1984',
+    author: 'George Orwell',
+    description: 'A dystopian social science fiction novel',
+    isbn: '9780451524935',
+    price: 16.99,
+    stock: 0,
+    category: 'Science Fiction',
+    publisher: 'Secker & Warburg',
+    language: 'English',
+    pages: 328,
+    isActive: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+];
+
 export default function AdminPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,37 +95,95 @@ export default function AdminPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginForm, setLoginForm] = useState({
+    email: '',
+    password: ''
+  });
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_BASE_URL = import.meta.env.VITE_PRODUCT_API_URL || 'http://localhost:3001';
+
+  // Validate a token by attempting to call the admin-only products endpoint.
+  const validateAdminToken = async (token: string | null): Promise<boolean> => {
+    if (!token) return false;
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/admin/all?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // On mount, validate any stored token rather than blindly writing a demo token.
+  useEffect(() => {
+    const init = async () => {
+      const token = localStorage.getItem('admin_token');
+      if (token && token !== 'demo-token') {
+        const valid = await validateAdminToken(token);
+        if (valid) {
+          setIsDemoMode(false);
+          setError(null);
+          return;
+        }
+        // Stored token is not valid for admin APIs -> fallback to demo
+        localStorage.setItem('admin_token', 'demo-token');
+        setIsDemoMode(true);
+        setError('Stored token is not authorized for admin API. Please login again.');
+        return;
+      }
+      // No usable token -> use demo
+      localStorage.setItem('admin_token', 'demo-token');
+      setIsDemoMode(true);
+    };
+    init();
+  }, []);
 
   // Fetch books from API
   const fetchBooks = async () => {
+    
     try {
       setLoading(true);
-      const token = localStorage.getItem('admin_token') || 'demo-token'; // For demo purposes
+      const token = localStorage.getItem('admin_token');
       
+      // First try the admin endpoint
       const response = await fetch(`${API_BASE_URL}/products/admin/all?limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
       
-      if (!response.ok) {
-        // If unauthorized, try without auth for demo
-        const demoResponse = await fetch(`${API_BASE_URL}/products?limit=100`);
-        if (!demoResponse.ok) {
-          throw new Error('Failed to fetch books');
-        }
-        const demoData: ApiResponse = await demoResponse.json();
-        setBooks(demoData.products);
-      } else {
+      if (response.ok) {
         const data: ApiResponse = await response.json();
         setBooks(data.products);
+        setIsDemoMode(false);
+        setError(null);
+        return;
       }
-      setError(null);
+
+      // If admin endpoint fails, try public endpoint
+      const publicResponse = await fetch(`${API_BASE_URL}/products?limit=100`);
+
+      if (publicResponse.ok) {
+        const publicData: ApiResponse = await publicResponse.json();
+        setBooks(publicData.products);
+        setIsDemoMode(true);
+        setError('Using public data - Admin access required for full features');
+        return;
+      }
+
+      // If both fail, use mock data
+      throw new Error('API not available');
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch books');
       console.error('Error fetching books:', err);
+      setBooks(mockBooks);
+      setIsDemoMode(true);
+      setError('Using demo data - API server not available. Changes will not be saved.');
     } finally {
       setLoading(false);
     }
@@ -82,6 +192,65 @@ export default function AdminPage() {
   useEffect(() => {
     fetchBooks();
   }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${import.meta.env.VITE_AUTH_API_URL || 'http://localhost:3002'}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginForm),
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      // Accept common token property names from different auth services
+      const token = data?.access_token || data?.token || data?.accessToken;
+      if (!token) {
+        throw new Error('Login succeeded but no token was returned');
+      }
+
+      // Validate token against admin endpoint before storing it
+      const valid = await validateAdminToken(token);
+      if (!valid) {
+        // Do not store an invalid admin token; keep demo mode instead
+        localStorage.setItem('admin_token', 'demo-token');
+        setIsDemoMode(true);
+        setIsLoginOpen(false);
+        setError('Login succeeded but token is not authorized for admin API. Contact API admin.');
+        await fetchBooks();
+        return;
+      }
+
+      // Token is valid for admin API -> store and switch to admin mode
+      localStorage.setItem('admin_token', token);
+      setIsDemoMode(false);
+      setIsLoginOpen(false);
+      setError(null);
+      await fetchBooks(); // Refresh with admin data
+    } catch (err) {
+      console.warn('Login attempt failed, falling back to demo behavior:', err);
+      // Fallback to demo token so user can continue in demo mode
+      localStorage.setItem('admin_token', 'demo-token');
+      setIsDemoMode(true);
+      setIsLoginOpen(false);
+      setError('Login failed - using demo mode');
+      await fetchBooks();
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    localStorage.setItem('admin_token', 'demo-token');
+    setIsDemoMode(true);
+    setBooks(mockBooks);
+    setError('Logged out - Using demo mode');
+  };
 
   const filteredBooks = useMemo(
     () =>
@@ -96,7 +265,21 @@ export default function AdminPage() {
 
   const handleCreate = async (newBook: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const token = localStorage.getItem('admin_token') || 'demo-token';
+      if (isDemoMode) {
+        // Demo mode: Add to local state
+        const demoBook: Book = {
+          ...newBook,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setBooks(prev => [demoBook, ...prev]);
+        setIsCreateOpen(false);
+        setError('Book created in demo mode (not saved to server)');
+        return;
+      }
+
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_BASE_URL}/products`, {
         method: 'POST',
         headers: {
@@ -107,21 +290,53 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create book' }));
         throw new Error(errorData.message || 'Failed to create book');
       }
 
       await fetchBooks(); // Refresh the list
       setIsCreateOpen(false);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create book');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create book';
+      setError(errorMessage);
       console.error('Error creating book:', err);
+      
+      // Fallback to demo mode if auth fails
+      if (errorMessage.includes('Authentication failed')) {
+        setIsDemoMode(true);
+        const demoBook: Book = {
+          ...newBook,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setBooks(prev => [demoBook, ...prev]);
+        setIsCreateOpen(false);
+        setError('Authentication failed. Created book in demo mode.');
+      }
     }
   };
 
   const handleUpdate = async (updatedBook: Omit<Book, "id" | "createdAt" | "updatedAt"> & { id: string }) => {
     try {
-      const token = localStorage.getItem('admin_token') || 'demo-token';
+      if (isDemoMode) {
+        // Demo mode: Update local state
+        setBooks(prev => prev.map(book => 
+          book.id === updatedBook.id 
+            ? { ...updatedBook, updatedAt: new Date().toISOString() } as Book
+            : book
+        ));
+        setIsEditOpen(false);
+        setSelectedBook(null);
+        setError('Book updated in demo mode (not saved to server)');
+        return;
+      }
+
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_BASE_URL}/products/${updatedBook.id}`, {
         method: 'PATCH',
         headers: {
@@ -132,16 +347,34 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Failed to update book' }));
         throw new Error(errorData.message || 'Failed to update book');
       }
 
       await fetchBooks(); // Refresh the list
       setIsEditOpen(false);
       setSelectedBook(null);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update book');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update book';
+      setError(errorMessage);
       console.error('Error updating book:', err);
+      
+      // Fallback to demo mode if auth fails
+      if (errorMessage.includes('Authentication failed')) {
+        setIsDemoMode(true);
+        setBooks(prev => prev.map(book => 
+          book.id === updatedBook.id 
+            ? { ...updatedBook, updatedAt: new Date().toISOString() } as Book
+            : book
+        ));
+        setIsEditOpen(false);
+        setSelectedBook(null);
+        setError('Authentication failed. Updated book in demo mode.');
+      }
     }
   };
 
@@ -149,7 +382,16 @@ export default function AdminPage() {
     if (!bookToDelete) return;
 
     try {
-      const token = localStorage.getItem('admin_token') || 'demo-token';
+      if (isDemoMode) {
+        // Demo mode: Remove from local state
+        setBooks(prev => prev.filter(book => book.id !== bookToDelete.id));
+        setIsDeleteOpen(false);
+        setBookToDelete(null);
+        setError('Book deleted in demo mode (not saved to server)');
+        return;
+      }
+
+      const token = localStorage.getItem('admin_token');
       const response = await fetch(`${API_BASE_URL}/products/${bookToDelete.id}`, {
         method: 'DELETE',
         headers: {
@@ -158,16 +400,30 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Failed to delete book' }));
         throw new Error(errorData.message || 'Failed to delete book');
       }
 
       await fetchBooks(); // Refresh the list
       setIsDeleteOpen(false);
       setBookToDelete(null);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete book');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete book';
+      setError(errorMessage);
       console.error('Error deleting book:', err);
+      
+      // Fallback to demo mode if auth fails
+      if (errorMessage.includes('Authentication failed')) {
+        setIsDemoMode(true);
+        setBooks(prev => prev.filter(book => book.id !== bookToDelete.id));
+        setIsDeleteOpen(false);
+        setBookToDelete(null);
+        setError('Authentication failed. Deleted book in demo mode.');
+      }
     }
   };
 
@@ -257,7 +513,34 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">API: {API_BASE_URL}</span>
+            {isDemoMode ? (
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-full text-sm font-medium">
+                  Demo Mode
+                </span>
+                <button
+                  onClick={() => setIsLoginOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
+                >
+                  <User className="w-4 h-4" />
+                  Login
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-green-100 text-green-800 border border-green-300 rounded-full text-sm font-medium">
+                  Admin Mode
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            )}
+            <span className="text-sm text-gray-600 hidden md:inline">API: {API_BASE_URL}</span>
             <button
               onClick={() => window.location.href = '/'}
               className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2"
@@ -298,12 +581,16 @@ export default function AdminPage() {
         <main className="flex-1 p-6 lg:p-8">
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-100 border-2 border-red-300 rounded-lg text-red-700 animate-fade-in">
+            <div className={`mb-6 p-4 border-2 rounded-lg animate-fade-in ${
+              error.includes('demo') || error.includes('Demo') 
+                ? 'bg-yellow-100 border-yellow-300 text-yellow-800'
+                : 'bg-red-100 border-red-300 text-red-700'
+            }`}>
               <div className="flex justify-between items-center">
                 <span>{error}</span>
                 <button 
                   onClick={() => setError(null)}
-                  className="font-bold text-lg hover:text-red-900"
+                  className="font-bold text-lg hover:opacity-70"
                 >
                   ×
                 </button>
@@ -335,7 +622,12 @@ export default function AdminPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Book Inventory</h2>
-                  <p className="text-gray-600 mt-1">Manage all books in your catalog</p>
+                  <p className="text-gray-600 mt-1">
+                    {isDemoMode 
+                      ? 'Demo mode - Changes are temporary' 
+                      : 'Manage all books in your catalog'
+                    }
+                  </p>
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -463,11 +755,66 @@ export default function AdminPage() {
               {/* Table Footer */}
               <div className="mt-4 text-sm text-gray-600">
                 Showing {filteredBooks.length} of {books.length} books
+                {isDemoMode && ' (Demo Mode)'}
               </div>
             </div>
           </div>
         </main>
       </div>
+
+      {/* Login Modal */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border-2 border-gray-200 max-w-md w-full animate-fade-in">
+            <div className="border-b-2 border-gray-200 p-6">
+              <h3 className="text-2xl font-bold text-gray-900">Admin Login</h3>
+              <p className="text-gray-600 mt-1">Enter your credentials to access admin features</p>
+            </div>
+            <form onSubmit={handleLogin} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="admin@example.com"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Password</label>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter password"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                  required
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold"
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginOpen(false)}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+              <div className="text-center text-sm text-gray-600">
+                <p>Demo: Use any email and password</p>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Book Modal */}
       {(isCreateOpen || isEditOpen) && (
@@ -479,6 +826,7 @@ export default function AdminPage() {
               </h3>
               <p className="text-gray-600 mt-1">
                 {isCreateOpen ? 'Add a new book to your inventory' : 'Update book information'}
+                {isDemoMode && ' (Demo Mode - Changes are temporary)'}
               </p>
             </div>
             <BookForm
@@ -507,7 +855,10 @@ export default function AdminPage() {
                 Delete {bookToDelete.title}?
               </h3>
               <p className="text-gray-600 mb-6">
-                This action cannot be undone. The book will be permanently removed from your inventory.
+                {isDemoMode 
+                  ? 'This action will remove the book from demo mode (changes are temporary).'
+                  : 'This action cannot be undone. The book will be permanently removed from your inventory.'
+                }
               </p>
               <div className="flex gap-3 justify-end">
                 <button

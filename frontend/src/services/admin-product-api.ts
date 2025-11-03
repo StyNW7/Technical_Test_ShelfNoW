@@ -33,6 +33,7 @@ export interface CreateProductRequest {
   publishedAt?: string;
   language?: string;
   pages?: number;
+  isActive?: boolean;
 }
 
 export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
@@ -48,17 +49,12 @@ export interface ProductsResponse {
 }
 
 class AdminProductApiService {
-  private getAuthToken(): string | null {
-    return localStorage.getItem('access_token');
+  private getAuthToken(): string {
+    return localStorage.getItem('admin_token') || 'demo-token';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = this.getAuthToken();
-    
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
     const url = `${PRODUCT_API_URL}${endpoint}`;
     
     const response = await fetch(url, {
@@ -72,7 +68,7 @@ class AdminProductApiService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ 
-        message: 'Network error' 
+        message: `HTTP error! status: ${response.status}` 
       }));
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
@@ -122,7 +118,7 @@ class AdminProductApiService {
 
   async getAllProducts(
     page: number = 1,
-    limit: number = 50,
+    limit: number = 100,
     category?: string,
     search?: string
   ): Promise<ProductsResponse> {
@@ -138,6 +134,15 @@ class AdminProductApiService {
 
   async getProduct(id: string): Promise<Product> {
     return this.request<Product>(`/products/admin/${id}`);
+  }
+
+  // Public endpoints (for fallback)
+  async getPublicProducts(limit: number = 100): Promise<ProductsResponse> {
+    const response = await fetch(`${PRODUCT_API_URL}/products?limit=${limit}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
   }
 }
 
