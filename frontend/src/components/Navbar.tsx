@@ -10,10 +10,9 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
-    { label: "Home", href: "#home" },
-    { label: "About", href: "#about" },
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "Shop", href: "#shop" },
+    { label: "Home", href: "/" },
+    { label: "Transaction History", href: "/transaction" },
+    { label: "Shop", href: "/shop" },
   ]
 
   return (
@@ -44,7 +43,7 @@ export function Navbar() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="relative p-2 text-black hover:text-black/60 transition-colors">
+            <button className="relative p-2 text-black hover:text-black/60 transition-colors" onClick={() => navigate("/cart")}>
               <ShoppingCart size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-black rounded-full"></span>
             </button>

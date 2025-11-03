@@ -25,6 +25,7 @@ import LoginPage from "./pages/Auth/Login";
 import RegisterPage from "./pages/Auth/Register";
 import ShopPage from "./pages/Shop/Store";
 import BookDetailPage from "./pages/Shop/[id]/Book";
+import AdminPage from "./pages/Admin/page";
 
 function App() {
 
@@ -58,6 +59,8 @@ function App() {
                 <Route path="/shop" element={<ShopPage/>} />
 
                 <Route path="/book/:id" element={<BookDetailPage/>} />
+
+                <Route path="/admin" element={<AdminPage/>} />
 
                 <Route path="*" element={<NotFoundPage />} />
 

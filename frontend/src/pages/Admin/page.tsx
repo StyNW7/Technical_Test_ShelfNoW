@@ -1,50 +1,87 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Plus, Edit2, Trash2, Search, Package, Zap, Menu, X, Home } from 'lucide-react';
+import BookForm from '@/components/admin/book-form';
 
-// Mock data
-const mockBooks = [
-  {
-    id: '1',
-    title: 'The Great Gatsby',
-    author: 'F. Scott Fitzgerald',
-    isbn: '9780743273565',
-    price: 15.99,
-    stock: 25,
-    category: 'Fiction',
-    isActive: true,
-  },
-  {
-    id: '2',
-    title: 'To Kill a Mockingbird',
-    author: 'Harper Lee',
-    isbn: '9780061120084',
-    price: 18.99,
-    stock: 8,
-    category: 'Fiction',
-    isActive: true,
-  },
-  {
-    id: '3',
-    title: '1984',
-    author: 'George Orwell',
-    isbn: '9780451524935',
-    price: 16.99,
-    stock: 0,
-    category: 'Fiction',
-    isActive: false,
-  },
-];
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  isbn?: string;
+  price: number;
+  stock: number;
+  imageUrl?: string;
+  category: string;
+  publisher?: string;
+  publishedAt?: Date;
+  language: string;
+  pages?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApiResponse {
+  products: Book[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
 
 export default function AdminPage() {
-  const [books, setBooks] = useState(mockBooks);
+  const [books, setBooks] = useState<Book[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState(null);
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Fetch books from API
+  const fetchBooks = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('admin_token') || 'demo-token'; // For demo purposes
+      
+      const response = await fetch(`${API_BASE_URL}/products/admin/all?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        // If unauthorized, try without auth for demo
+        const demoResponse = await fetch(`${API_BASE_URL}/products?limit=100`);
+        if (!demoResponse.ok) {
+          throw new Error('Failed to fetch books');
+        }
+        const demoData: ApiResponse = await demoResponse.json();
+        setBooks(demoData.products);
+      } else {
+        const data: ApiResponse = await response.json();
+        setBooks(data.products);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch books');
+      console.error('Error fetching books:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
 
   const filteredBooks = useMemo(
     () =>
@@ -57,26 +94,80 @@ export default function AdminPage() {
     [books, searchTerm]
   );
 
-  const handleCreate = (newBook: any) => {
-    const book = {
-      ...newBook,
-      id: Date.now().toString(),
-    };
-    setBooks((prev) => [book, ...prev]);
-    setIsCreateOpen(false);
+  const handleCreate = async (newBook: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const token = localStorage.getItem('admin_token') || 'demo-token';
+      const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(newBook),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create book');
+      }
+
+      await fetchBooks(); // Refresh the list
+      setIsCreateOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create book');
+      console.error('Error creating book:', err);
+    }
   };
 
-  const handleUpdate = (updatedBook: { id: string; }) => {
-    setBooks((prev) => prev.map((b) => (b.id === updatedBook.id ? updatedBook : b)));
-    setIsEditOpen(false);
-    setSelectedBook(null);
+  const handleUpdate = async (updatedBook: Omit<Book, "id" | "createdAt" | "updatedAt"> & { id: string }) => {
+    try {
+      const token = localStorage.getItem('admin_token') || 'demo-token';
+      const response = await fetch(`${API_BASE_URL}/products/${updatedBook.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedBook),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update book');
+      }
+
+      await fetchBooks(); // Refresh the list
+      setIsEditOpen(false);
+      setSelectedBook(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update book');
+      console.error('Error updating book:', err);
+    }
   };
 
-  const handleDeleteConfirm = () => {
-    if (bookToDelete) {
-      setBooks((prev) => prev.filter((b) => b.id !== bookToDelete.id));
+  const handleDeleteConfirm = async () => {
+    if (!bookToDelete) return;
+
+    try {
+      const token = localStorage.getItem('admin_token') || 'demo-token';
+      const response = await fetch(`${API_BASE_URL}/products/${bookToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete book');
+      }
+
+      await fetchBooks(); // Refresh the list
       setIsDeleteOpen(false);
       setBookToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete book');
+      console.error('Error deleting book:', err);
     }
   };
 
@@ -97,6 +188,17 @@ export default function AdminPage() {
       icon: <Package className="w-6 h-6" />,
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading books...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,13 +256,16 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => window.location.href = '/'}
-            className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2"
-          >
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to Home</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">API: {API_BASE_URL}</span>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all flex items-center gap-2"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -191,6 +296,21 @@ export default function AdminPage() {
 
         {/* Main Content */}
         <main className="flex-1 p-6 lg:p-8">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-100 border-2 border-red-300 rounded-lg text-red-700 animate-fade-in">
+              <div className="flex justify-between items-center">
+                <span>{error}</span>
+                <button 
+                  onClick={() => setError(null)}
+                  className="font-bold text-lg hover:text-red-900"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Stats Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {stats.map((stat, idx) => (
@@ -217,13 +337,21 @@ export default function AdminPage() {
                   <h2 className="text-2xl font-bold text-gray-900">Book Inventory</h2>
                   <p className="text-gray-600 mt-1">Manage all books in your catalog</p>
                 </div>
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold shadow-lg hover:shadow-xl"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add New Book
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={fetchBooks}
+                    className="px-4 py-2.5 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all font-semibold"
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold shadow-lg hover:shadow-xl"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add New Book
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -260,7 +388,7 @@ export default function AdminPage() {
                       filteredBooks.map((book, idx) => (
                         <tr
                           key={book.id}
-                          className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                          className="border-b border-gray-200 hover:bg-gray-50 transition-colors animate-slide-up"
                           style={{ animationDelay: `${idx * 50}ms` }}
                         >
                           <td className="px-4 py-4 font-medium text-gray-900 max-w-xs truncate">
@@ -324,7 +452,7 @@ export default function AdminPage() {
                     ) : (
                       <tr>
                         <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                          No books found. Try adjusting your search.
+                          No books found. {searchTerm ? 'Try adjusting your search.' : 'Start by adding a new book.'}
                         </td>
                       </tr>
                     )}
@@ -344,7 +472,7 @@ export default function AdminPage() {
       {/* Create/Edit Book Modal */}
       {(isCreateOpen || isEditOpen) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border-2 border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-xl border-2 border-gray-200 max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-fade-in">
             <div className="border-b-2 border-gray-200 p-6">
               <h3 className="text-2xl font-bold text-gray-900">
                 {isCreateOpen ? 'Create New Book' : 'Edit Book'}
@@ -354,8 +482,12 @@ export default function AdminPage() {
               </p>
             </div>
             <BookForm
-              initialData={selectedBook}
-              onSubmit={isCreateOpen ? handleCreate : handleUpdate}
+              initialData={selectedBook || undefined}
+              onSubmit={isCreateOpen ? handleCreate : (data) => {
+                if (selectedBook) {
+                  handleUpdate({ ...data, id: selectedBook.id });
+                }
+              }}
               onCancel={() => {
                 setIsCreateOpen(false);
                 setIsEditOpen(false);
@@ -398,160 +530,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Book Form Component
-function BookForm({ initialData, onSubmit, onCancel }) {
-  const [formData, setFormData] = useState(
-    initialData || {
-      title: '',
-      author: '',
-      isbn: '',
-      price: '',
-      stock: '',
-      category: 'Fiction',
-      isActive: true,
-    }
-  );
-
-  const handleChange = (e: { target: { name: any; value: any; type: any; checked: any; }; }) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  const handleSubmit = (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    onSubmit({
-      ...formData,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock),
-    });
-  };
-
-  return (
-    <div className="p-6">
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Title</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Book title"
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Author</label>
-            <input
-              type="text"
-              name="author"
-              value={formData.author}
-              onChange={handleChange}
-              placeholder="Author name"
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">ISBN</label>
-            <input
-              type="text"
-              name="isbn"
-              value={formData.isbn}
-              onChange={handleChange}
-              placeholder="978-0-00-000000-0"
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Category</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-            >
-              <option>Fiction</option>
-              <option>Non-Fiction</option>
-              <option>Mystery</option>
-              <option>Science Fiction</option>
-              <option>Biography</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Price ($)</label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              placeholder="19.99"
-              step="0.01"
-              min="0"
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              value={formData.stock}
-              onChange={handleChange}
-              placeholder="100"
-              min="0"
-              className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:bg-white transition-all"
-              required
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="isActive"
-              checked={formData.isActive}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-2 border-gray-300 cursor-pointer accent-gray-900"
-            />
-            <span className="text-sm font-semibold text-gray-900">Book is active</span>
-          </label>
-        </div>
-      </div>
-
-      <div className="flex gap-3 justify-end mt-6 pt-6 border-t-2 border-gray-200">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-all font-semibold"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold shadow-lg"
-        >
-          {initialData ? 'Update Book' : 'Create Book'}
-        </button>
-      </div>
     </div>
   );
 }

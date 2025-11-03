@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -9,12 +9,16 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     try {
+      // Validate required fields
+      if (!createProductDto.title || !createProductDto.author || !createProductDto.description) {
+        throw new BadRequestException('Title, author, and description are required');
+      }
+
       // Check if ISBN already exists (if provided)
       if (createProductDto.isbn) {
         const existingProduct = await this.prisma.product.findFirst({
           where: {
             isbn: createProductDto.isbn,
-            isActive: true,
           },
         });
 
@@ -23,12 +27,14 @@ export class ProductsService {
         }
       }
 
-      return await this.prisma.product.create({
+      const product = await this.prisma.product.create({
         data: {
           ...createProductDto,
-          isActive: true,
+          isActive: createProductDto.isActive !== undefined ? createProductDto.isActive : true,
         },
       });
+
+      return product;
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ConflictException('A product with this ISBN already exists');
@@ -100,17 +106,25 @@ export class ProductsService {
 
   async update(id: string, updateProductDto: UpdateProductDto) {
     try {
+      // Check if product exists
+      const existingProduct = await this.prisma.product.findUnique({
+        where: { id },
+      });
+
+      if (!existingProduct) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+
       // Check if ISBN already exists for other products (if provided)
       if (updateProductDto.isbn) {
-        const existingProduct = await this.prisma.product.findFirst({
+        const productWithSameIsbn = await this.prisma.product.findFirst({
           where: {
             isbn: updateProductDto.isbn,
             id: { not: id },
-            isActive: true,
           },
         });
 
-        if (existingProduct) {
+        if (productWithSameIsbn) {
           throw new ConflictException('A product with this ISBN already exists');
         }
       }
@@ -132,6 +146,15 @@ export class ProductsService {
 
   async remove(id: string) {
     try {
+      // Check if product exists
+      const existingProduct = await this.prisma.product.findUnique({
+        where: { id },
+      });
+
+      if (!existingProduct) {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+
       // Soft delete by setting isActive to false
       return await this.prisma.product.update({
         where: { id },
@@ -196,7 +219,7 @@ export class ProductsService {
 
       const newStock = product.stock + quantity;
       if (newStock < 0) {
-        throw new Error('Insufficient stock');
+        throw new BadRequestException('Insufficient stock');
       }
 
       return await this.prisma.product.update({
@@ -207,7 +230,7 @@ export class ProductsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error(`Failed to update stock: ${error.message}`);
+      throw new BadRequestException(`Failed to update stock: ${error.message}`);
     }
   }
 

@@ -1,20 +1,53 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import type { Book } from "@/lib/mock-books"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { categories } from "@/lib/mock-books"
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  isbn?: string;
+  price: number;
+  stock: number;
+  imageUrl?: string;
+  category: string;
+  publisher?: string;
+  publishedAt?: Date;
+  language: string;
+  pages?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const categories = [
+  "Fiction",
+  "Non-Fiction",
+  "Mystery",
+  "Science Fiction",
+  "Fantasy",
+  "Biography",
+  "History",
+  "Children",
+  "Young Adult",
+  "Romance",
+  "Thriller",
+  "Horror",
+  "Self-Help",
+  "Business",
+  "Science",
+  "Technology",
+  "Art",
+  "Cooking",
+  "Travel",
+  "Religion"
+];
 
 interface BookFormProps {
   initialData?: Book
-  onSubmit: (data: Omit<Book, "id" | "createdAt" | "updatedAt">) => void
+  onSubmit: (data: Omit<Book, "id" | "createdAt" | "updatedAt">) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -36,6 +69,7 @@ export default function BookForm({ initialData, onSubmit, onCancel }: BookFormPr
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -51,26 +85,32 @@ export default function BookForm({ initialData, onSubmit, onCancel }: BookFormPr
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!validateForm()) return
 
-    onSubmit({
-      title: formData.title,
-      author: formData.author,
-      description: formData.description,
-      isbn: formData.isbn || undefined,
-      price: Number.parseFloat(formData.price),
-      stock: Number.parseInt(formData.stock),
-      imageUrl: formData.imageUrl || undefined,
-      category: formData.category,
-      publisher: formData.publisher || undefined,
-      publishedAt: formData.publishedAt ? new Date(formData.publishedAt) : undefined,
-      language: formData.language,
-      pages: formData.pages ? Number.parseInt(formData.pages) : undefined,
-      isActive: formData.isActive,
-    })
+    setIsSubmitting(true)
+    try {
+      await onSubmit({
+        title: formData.title,
+        author: formData.author,
+        description: formData.description,
+        isbn: formData.isbn || undefined,
+        price: Number.parseFloat(formData.price),
+        stock: Number.parseInt(formData.stock),
+        imageUrl: formData.imageUrl || undefined,
+        category: formData.category,
+        publisher: formData.publisher || undefined,
+        publishedAt: formData.publishedAt ? new Date(formData.publishedAt) : undefined,
+        language: formData.language,
+        pages: formData.pages ? Number.parseInt(formData.pages) : undefined,
+        isActive: formData.isActive,
+      })
+    } catch (error) {
+      console.error('Error submitting form:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -85,63 +125,67 @@ export default function BookForm({ initialData, onSubmit, onCancel }: BookFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
+    <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in p-6">
       {/* Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "50ms" }}>
-          <Label htmlFor="title" className="font-semibold">
+          <label htmlFor="title" className="block text-sm font-semibold text-gray-900">
             Title *
-          </Label>
-          <Input
+          </label>
+          <input
             id="title"
             value={formData.title}
             onChange={(e) => handleChange("title", e.target.value)}
             placeholder="Book title"
-            className={`border-2 focus:ring-2 ${errors.title ? "border-destructive" : "border-black"}`}
+            className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+              errors.title ? "border-red-500" : "border-gray-300"
+            }`}
           />
-          {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+          {errors.title && <p className="text-xs text-red-500">{errors.title}</p>}
         </div>
 
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "100ms" }}>
-          <Label htmlFor="author" className="font-semibold">
+          <label htmlFor="author" className="block text-sm font-semibold text-gray-900">
             Author *
-          </Label>
-          <Input
+          </label>
+          <input
             id="author"
             value={formData.author}
             onChange={(e) => handleChange("author", e.target.value)}
             placeholder="Author name"
-            className={`border-2 focus:ring-2 ${errors.author ? "border-destructive" : "border-black"}`}
+            className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+              errors.author ? "border-red-500" : "border-gray-300"
+            }`}
           />
-          {errors.author && <p className="text-xs text-destructive">{errors.author}</p>}
+          {errors.author && <p className="text-xs text-red-500">{errors.author}</p>}
         </div>
       </div>
 
       {/* Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "150ms" }}>
-          <Label htmlFor="isbn" className="font-semibold">
+          <label htmlFor="isbn" className="block text-sm font-semibold text-gray-900">
             ISBN
-          </Label>
-          <Input
+          </label>
+          <input
             id="isbn"
             value={formData.isbn}
             onChange={(e) => handleChange("isbn", e.target.value)}
             placeholder="ISBN-10 or ISBN-13"
-            className="border-2 border-black focus:ring-2"
+            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
           />
         </div>
 
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "200ms" }}>
-          <Label htmlFor="publisher" className="font-semibold">
+          <label htmlFor="publisher" className="block text-sm font-semibold text-gray-900">
             Publisher
-          </Label>
-          <Input
+          </label>
+          <input
             id="publisher"
             value={formData.publisher}
             onChange={(e) => handleChange("publisher", e.target.value)}
             placeholder="Publisher name"
-            className="border-2 border-black focus:ring-2"
+            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
           />
         </div>
       </div>
@@ -149,162 +193,174 @@ export default function BookForm({ initialData, onSubmit, onCancel }: BookFormPr
       {/* Row 3 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "250ms" }}>
-          <Label htmlFor="price" className="font-semibold">
+          <label htmlFor="price" className="block text-sm font-semibold text-gray-900">
             Price *
-          </Label>
-          <Input
+          </label>
+          <input
             id="price"
             type="number"
             step="0.01"
             value={formData.price}
             onChange={(e) => handleChange("price", e.target.value)}
             placeholder="0.00"
-            className={`border-2 focus:ring-2 ${errors.price ? "border-destructive" : "border-black"}`}
+            className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+              errors.price ? "border-red-500" : "border-gray-300"
+            }`}
           />
-          {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
+          {errors.price && <p className="text-xs text-red-500">{errors.price}</p>}
         </div>
 
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "300ms" }}>
-          <Label htmlFor="stock" className="font-semibold">
+          <label htmlFor="stock" className="block text-sm font-semibold text-gray-900">
             Stock *
-          </Label>
-          <Input
+          </label>
+          <input
             id="stock"
             type="number"
             value={formData.stock}
             onChange={(e) => handleChange("stock", e.target.value)}
             placeholder="0"
-            className={`border-2 focus:ring-2 ${errors.stock ? "border-destructive" : "border-black"}`}
+            className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+              errors.stock ? "border-red-500" : "border-gray-300"
+            }`}
           />
-          {errors.stock && <p className="text-xs text-destructive">{errors.stock}</p>}
+          {errors.stock && <p className="text-xs text-red-500">{errors.stock}</p>}
         </div>
 
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "350ms" }}>
-          <Label htmlFor="pages" className="font-semibold">
+          <label htmlFor="pages" className="block text-sm font-semibold text-gray-900">
             Pages
-          </Label>
-          <Input
+          </label>
+          <input
             id="pages"
             type="number"
             value={formData.pages}
             onChange={(e) => handleChange("pages", e.target.value)}
             placeholder="0"
-            className={`border-2 focus:ring-2 ${errors.pages ? "border-destructive" : "border-black"}`}
+            className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+              errors.pages ? "border-red-500" : "border-gray-300"
+            }`}
           />
-          {errors.pages && <p className="text-xs text-destructive">{errors.pages}</p>}
+          {errors.pages && <p className="text-xs text-red-500">{errors.pages}</p>}
         </div>
       </div>
 
       {/* Row 4 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "400ms" }}>
-          <Label htmlFor="category" className="font-semibold">
+          <label htmlFor="category" className="block text-sm font-semibold text-gray-900">
             Category
-          </Label>
-          <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
-            <SelectTrigger className="border-2 border-black focus:ring-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border-2 border-black">
-              {categories.slice(1).map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          </label>
+          <select
+            id="category"
+            value={formData.category}
+            onChange={(e) => handleChange("category", e.target.value)}
+            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2 animate-slide-up" style={{ animationDelay: "450ms" }}>
-          <Label htmlFor="language" className="font-semibold">
+          <label htmlFor="language" className="block text-sm font-semibold text-gray-900">
             Language
-          </Label>
-          <Select value={formData.language} onValueChange={(value) => handleChange("language", value)}>
-            <SelectTrigger className="border-2 border-black focus:ring-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="border-2 border-black">
-              <SelectItem value="English">English</SelectItem>
-              <SelectItem value="Spanish">Spanish</SelectItem>
-              <SelectItem value="French">French</SelectItem>
-              <SelectItem value="German">German</SelectItem>
-              <SelectItem value="Chinese">Chinese</SelectItem>
-              <SelectItem value="Japanese">Japanese</SelectItem>
-            </SelectContent>
-          </Select>
+          </label>
+          <select
+            id="language"
+            value={formData.language}
+            onChange={(e) => handleChange("language", e.target.value)}
+            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+          >
+            <option value="English">English</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Japanese">Japanese</option>
+          </select>
         </div>
       </div>
 
       {/* Row 5 */}
       <div className="space-y-2 animate-slide-up" style={{ animationDelay: "500ms" }}>
-        <Label htmlFor="description" className="font-semibold">
+        <label htmlFor="description" className="block text-sm font-semibold text-gray-900">
           Description *
-        </Label>
-        <Textarea
+        </label>
+        <textarea
           id="description"
           value={formData.description}
           onChange={(e) => handleChange("description", e.target.value)}
           placeholder="Book description"
           rows={4}
-          className={`border-2 focus:ring-2 ${errors.description ? "border-destructive" : "border-black"}`}
+          className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:border-gray-900 transition-colors ${
+            errors.description ? "border-red-500" : "border-gray-300"
+          }`}
         />
-        {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
+        {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
       </div>
 
       {/* Row 6 */}
       <div className="space-y-2 animate-slide-up" style={{ animationDelay: "550ms" }}>
-        <Label htmlFor="imageUrl" className="font-semibold">
+        <label htmlFor="imageUrl" className="block text-sm font-semibold text-gray-900">
           Image URL
-        </Label>
-        <Input
+        </label>
+        <input
           id="imageUrl"
           value={formData.imageUrl}
           onChange={(e) => handleChange("imageUrl", e.target.value)}
           placeholder="https://example.com/image.jpg"
-          className="border-2 border-black focus:ring-2"
+          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
         />
       </div>
 
       {/* Row 7 */}
       <div className="space-y-2 animate-slide-up" style={{ animationDelay: "600ms" }}>
-        <Label htmlFor="publishedAt" className="font-semibold">
+        <label htmlFor="publishedAt" className="block text-sm font-semibold text-gray-900">
           Published Date
-        </Label>
-        <Input
+        </label>
+        <input
           id="publishedAt"
           type="date"
           value={formData.publishedAt}
           onChange={(e) => handleChange("publishedAt", e.target.value)}
-          className="border-2 border-black focus:ring-2"
+          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
         />
       </div>
 
       {/* Checkbox */}
       <div className="flex items-center gap-3 animate-slide-up" style={{ animationDelay: "650ms" }}>
-        <Checkbox
+        <input
+          type="checkbox"
           id="isActive"
           checked={formData.isActive}
-          onCheckedChange={(checked) => handleChange("isActive", checked as boolean)}
-          className="border-2 border-black"
+          onChange={(e) => handleChange("isActive", e.target.checked)}
+          className="h-4 w-4 rounded border-2 border-gray-300 cursor-pointer accent-gray-900"
         />
-        <Label htmlFor="isActive" className="font-semibold cursor-pointer">
+        <label htmlFor="isActive" className="text-sm font-semibold text-gray-900 cursor-pointer">
           Active
-        </Label>
+        </label>
       </div>
 
       {/* Buttons */}
-      <div className="flex gap-3 pt-6 border-t-2 border-black animate-slide-up" style={{ animationDelay: "700ms" }}>
-        <Button type="submit" className="flex-1 bg-black hover:bg-black/90 text-white border-2 border-black">
-          {initialData ? "Update Book" : "Create Book"}
-        </Button>
-        <Button
+      <div className="flex gap-3 pt-6 border-t-2 border-gray-200 animate-slide-up" style={{ animationDelay: "700ms" }}>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all font-semibold border-2 border-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? "Processing..." : initialData ? "Update Book" : "Create Book"}
+        </button>
+        <button
           type="button"
-          variant="outline"
           onClick={onCancel}
-          className="flex-1 border-2 border-black bg-transparent"
+          className="flex-1 px-4 py-2 border-2 border-gray-300 bg-transparent rounded-lg hover:bg-gray-100 transition-all font-semibold"
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </form>
   )
