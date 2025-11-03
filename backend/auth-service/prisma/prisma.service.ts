@@ -6,11 +6,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     super({
       log: ['query', 'info', 'warn', 'error'],
+      errorFormat: 'colorless',
     });
   }
 
   async onModuleInit() {
     await this.$connect();
+    console.log('Connected to auth database');
   }
 
   async onModuleDestroy() {
