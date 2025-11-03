@@ -1,5 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const API_BASE_URL = 'http://localhost:3001';
+// Determine the API URL based on environment
+const getApiBaseUrl = () => {
+  // In Docker, we can use the service name
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3001';
+};
+
+const AUTH_SERVICE_URL = getApiBaseUrl();
 
 export interface LoginRequest {
   email: string;
@@ -26,7 +37,11 @@ export interface AuthResponse {
 
 class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${AUTH_SERVICE_URL}${endpoint}`;
+    
+    console.log(`Making request to: ${url}`); // For debugging
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -35,8 +50,10 @@ class ApiService {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Network error' }));
-      throw new Error(error.message || 'Something went wrong');
+      const errorData = await response.json().catch(() => ({ 
+        message: 'Network error' 
+      }));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     return response.json();

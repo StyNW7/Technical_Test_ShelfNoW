@@ -1,5 +1,6 @@
 version: "3.8"
 services:
+
   auth-service:
     build: 
       context: ./backend/auth-service
@@ -52,6 +53,22 @@ services:
   #     - ./backend/order-service:/usr/src/app
   #     - /usr/src/app/node_modules
   #   command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend  # Frontend root directory
+      target: development
+    container_name: shelfnow_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - auth-service
+    command: npm run dev -- --host 0.0.0.0
 
   mysql:
     image: mysql:8.0
