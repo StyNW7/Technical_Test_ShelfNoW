@@ -1,59 +1,92 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { mockBooks } from "@/lib/mock-books"
-import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check } from "lucide-react"
-import { useParams } from "react-router-dom"
+import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check, Loader2 } from "lucide-react"
+import { useParams, Link } from "react-router-dom"
+import { productApiService, type Product } from "@/services/product-api"
 
 export default function BookDetailPage() {
-    
   const params = useParams()
   const bookId = params.id as string
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showAddedNotification, setShowAddedNotification] = useState(false)
-  const [cartItem, setCartItem] = useState<{ id: string; quantity: number } | null>(null)
+  const [book, setBook] = useState<Product | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const book = mockBooks.find((b) => b.id === bookId)
+  // Fetch book details from backend
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const bookData = await productApiService.getProduct(bookId)
+        setBook(bookData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch book details')
+        console.error('Error fetching book:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  if (!book) {
+    if (bookId) {
+      fetchBook()
+    }
+  }, [bookId])
+
+  const inStock = book ? book.stock > 0 : false
+  const maxQuantity = book ? Math.min(quantity + 9, book.stock) : 1
+
+  const handleAddToCart = () => {
+    setShowAddedNotification(true)
+    setTimeout(() => setShowAddedNotification(false), 3000)
+  }
+
+  if (isLoading) {
     return (
       <main className="min-h-screen bg-white">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4">Book Not Found</h1>
-            <a href="/shop">
-              <Button className="border-2 border-black">
-                <ChevronLeft size={20} />
-                Back to Shop
-              </Button>
-            </a>
+            <Loader2 className="h-8 w-8 animate-spin text-black mx-auto mb-4" />
+            <p className="text-lg">Loading book details...</p>
           </div>
         </div>
       </main>
     )
   }
 
-  const inStock = book.stock > 0
-  const maxQuantity = Math.min(quantity + 9, book.stock)
-
-  const handleAddToCart = () => {
-    setCartItem({ id: book.id, quantity })
-    setShowAddedNotification(true)
-    setTimeout(() => setShowAddedNotification(false), 3000)
+  if (error || !book) {
+    return (
+      <main className="min-h-screen bg-white">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Book Not Found</h1>
+            <p className="text-gray-600 mb-6">{error || "The book you're looking for doesn't exist."}</p>
+            <Link to="/shop">
+              <Button className="border-2 border-black">
+                <ChevronLeft size={20} />
+                Back to Shop
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
     <main className="min-h-screen bg-white">
-
       {/* Breadcrumb */}
       <div className="border-b-2 border-black">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
-          <a href="/shop" className="text-sm hover:font-bold transition-all">
-            ← Back to Shop
-          </a>
+          <Link to="/shop" className="text-sm hover:font-bold transition-all inline-flex items-center gap-1">
+            <ChevronLeft size={16} />
+            Back to Shop
+          </Link>
         </div>
       </div>
 
@@ -63,7 +96,22 @@ export default function BookDetailPage() {
           {/* Book Image */}
           <div className="animate-fade-in">
             <div className="border-2 border-black overflow-hidden bg-gray-50 aspect-[3/4] flex items-center justify-center">
-              <img src={book.imageUrl || "/placeholder.svg"} alt={book.title} className="w-full h-full object-cover" />
+              {book.imageUrl ? (
+                <img 
+                  src={book.imageUrl} 
+                  alt={book.title} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/placeholder-book.jpg";
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-center text-gray-400">
+                  <Package size={64} />
+                </div>
+              )}
             </div>
 
             {/* Additional Info Below Image */}
@@ -220,14 +268,13 @@ export default function BookDetailPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Continue Shopping</h2>
           <p className="text-gray-300 mb-8 text-lg">Discover more books in our collection</p>
-          <a href="/shop">
+          <Link to="/shop">
             <Button className="bg-white text-black border-2 border-white hover:bg-black hover:text-white hover:border-white">
               View All Books
             </Button>
-          </a>
+          </Link>
         </div>
       </section>
-
     </main>
   )
 }

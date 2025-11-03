@@ -1,22 +1,28 @@
 "use client"
 
 import { useState } from "react"
-import { Heart, Star } from "lucide-react"
+import { Heart, Star, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Book } from "@/lib/mock-books"
+import { Link } from "react-router-dom"
+import type { Product } from "@/services/product-api"
 
 interface BookCardProps {
-  book: Book
+  book: Product
 }
 
 export function BookCard({ book }: BookCardProps) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   const inStock = book.stock > 0
 
+  const handleImageError = () => {
+    setImageError(true)
+  }
+
   return (
-    <a href={`/shop/${book.id}`}>
+    <Link to={`/book/${book.id}`}>
       <div
         className="group cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
@@ -24,13 +30,20 @@ export function BookCard({ book }: BookCardProps) {
       >
         {/* Book Image Container */}
         <div className="relative mb-4 overflow-hidden border-2 border-black bg-white aspect-[3/4]">
-          <img
-            src={book.imageUrl || "/placeholder.svg"}
-            alt={book.title}
-            className={`w-full h-full object-cover transition-transform duration-500 ${
-              isHovered ? "scale-105" : "scale-100"
-            }`}
-          />
+          {book.imageUrl && !imageError ? (
+            <img
+              src={book.imageUrl}
+              alt={book.title}
+              className={`w-full h-full object-cover transition-transform duration-500 ${
+                isHovered ? "scale-105" : "scale-100"
+              }`}
+              onError={handleImageError}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <Package size={48} className="text-gray-400" />
+            </div>
+          )}
 
           {/* Overlay on Hover */}
           {isHovered && (
@@ -107,6 +120,6 @@ export function BookCard({ book }: BookCardProps) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   )
 }

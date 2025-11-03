@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 const PRODUCT_API_URL = import.meta.env.VITE_PRODUCT_API_URL || 'http://localhost:3002';
 
 export interface Product {
@@ -20,23 +19,6 @@ export interface Product {
   updatedAt: string;
 }
 
-export interface CreateProductRequest {
-  title: string;
-  author: string;
-  description: string;
-  isbn?: string;
-  price: number;
-  stock: number;
-  imageUrl?: string;
-  category: string;
-  publisher?: string;
-  publishedAt?: string;
-  language?: string;
-  pages?: number;
-}
-
-export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
-
 export interface ProductsResponse {
   products: Product[];
   pagination: {
@@ -48,25 +30,14 @@ export interface ProductsResponse {
 }
 
 class ProductApiService {
-  private getAuthToken(): string | null {
-    return localStorage.getItem('access_token');
-  }
-
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = this.getAuthToken();
     const url = `${PRODUCT_API_URL}${endpoint}`;
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
+    
     const response = await fetch(url, {
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
       ...options,
     });
 
@@ -102,33 +73,6 @@ class ProductApiService {
 
   async getCategories(): Promise<string[]> {
     return this.request<string[]>('/products/categories');
-  }
-
-  async createProduct(productData: CreateProductRequest): Promise<Product> {
-    return this.request<Product>('/products', {
-      method: 'POST',
-      body: JSON.stringify(productData),
-    });
-  }
-
-  async updateProduct(id: string, productData: UpdateProductRequest): Promise<Product> {
-    return this.request<Product>(`/products/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(productData),
-    });
-  }
-
-  async deleteProduct(id: string): Promise<void> {
-    await this.request(`/products/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async updateStock(id: string, quantity: number): Promise<Product> {
-    return this.request<Product>(`/products/${id}/stock`, {
-      method: 'PATCH',
-      body: JSON.stringify({ quantity }),
-    });
   }
 }
 
