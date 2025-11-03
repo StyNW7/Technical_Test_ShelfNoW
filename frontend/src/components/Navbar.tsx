@@ -1,118 +1,85 @@
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import ModeToggle from "@/components/theme-toggle"
+"use client"
 
-import { useLocation } from "react-router-dom";
+import { useState } from "react"
+import { Menu, X, ShoppingCart } from "lucide-react"
 
-export default function Navbar() {
-
+export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const location = useLocation();
-  const pathname = location.pathname;
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen) setIsOpen(false)
-  }, [pathname])
-
-  if (!mounted) return null
+  const navItems = [
+    { label: "Home", href: "#home" },
+    { label: "About", href: "#about" },
+    { label: "How It Works", href: "#how-it-works" },
+    { label: "Shop", href: "#shop" },
+  ]
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <a href="/" className="flex items-center space-x-2">
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="font-bold text-xl"
-          >
-            NW
-          </motion.div>
-        </a>
+    <nav className="sticky top-0 z-50 border-b border-black/10 bg-white/80 backdrop-blur-md transition-all duration-300">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2 group">
+            <div className="h-8 w-8 bg-black border-2 border-black flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <span className="text-xl font-black tracking-tight hidden sm:inline">ShelfNoW</span>
+          </a>
 
-        <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item, index) => (
-            <motion.div
-              key={item.href}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.5 }}
-            >
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
+            {navItems.map((item) => (
               <a
+                key={item.href}
                 href={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === item.href ? "text-foreground" : "text-muted-foreground"
-                }`}
+                className="text-sm font-medium text-black/70 hover:text-black transition-colors duration-200 relative group"
               >
                 {item.label}
-                {pathname === item.href && (
-                  <motion.div
-                    layoutId="navbar-indicator"
-                    className="h-0.5 bg-primary mt-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
-                )}
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300"></span>
               </a>
-            </motion.div>
-          ))}
-        </nav>
+            ))}
+          </div>
 
-        <div className="flex items-center gap-2">
-          <ModeToggle />
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          {/* Desktop CTA */}
+          <div className="hidden md:flex items-center gap-4">
+            <button className="relative p-2 text-black hover:text-black/60 transition-colors">
+              <ShoppingCart size={20} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-black rounded-full"></span>
+            </button>
+            <button className="px-6 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all duration-300 hover:bg-white hover:text-black">
+              Browse Books
+            </button>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden p-2 text-black hover:bg-black/5 rounded-lg transition-colors"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-      </div>
 
-      {/* Mobile menu */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
-          className="md:hidden border-b"
-        >
-          <div className="container py-4">
-            <nav className="flex flex-col gap-4">
+        {/* Mobile Navigation */}
+        {isOpen && (
+          <div className="md:hidden border-t border-black/10 py-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex flex-col gap-4">
               {navItems.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    pathname === item.href ? "text-foreground" : "text-muted-foreground"
-                  }`}
+                  className="text-sm font-medium text-black/70 hover:text-black transition-colors px-2 py-2"
                   onClick={() => setIsOpen(false)}
                 >
                   {item.label}
                 </a>
               ))}
-            </nav>
+              <button className="w-full mt-2 px-4 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all hover:bg-white hover:text-black">
+                Browse Books
+              </button>
+            </div>
           </div>
-        </motion.div>
-      )}
-    </header>
+        )}
+      </div>
+    </nav>
   )
 }
-
-const navItems = [
-  {
-    label: "Home",
-    href: "/",
-  },
-  {
-    label: "About",
-    href: "/about",
-  },
-]

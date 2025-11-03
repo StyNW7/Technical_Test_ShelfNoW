@@ -1,27 +1,33 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash('Admin123!', 10);
-  const existing = await prisma.user.findUnique({ where: { email: 'admin@shelfnow.test' } });
-  if (!existing) {
-    await prisma.user.create({
-      data: {
-        name: 'Admin ShelfNoW',
-        email: 'admin@shelfnow.test',
-        password,
-        role: 'ADMIN',
-      },
-    });
-    console.log('Seeded admin user: admin@shelfnow.test / Admin123!');
-  } else {
-    console.log('Admin already exists');
-  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  const password = await bcrypt.hash('admin123', 10);
+
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@shelfnow.com' },
+    update: {},
+    create: {
+      name: 'Admin ShelfNow',
+      email: 'admin@shelfnow.com',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      password,
+      role: 'ADMIN',
+    },
+  });
+
+  console.log('Seeded admin:', admin);
 }
 
 main()
-  .catch(e => { console.error(e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
