@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res, UseGuards, Headers, Options } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res, UseGuards, Options, Headers } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { GatewayService } from './gateway.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -17,7 +17,15 @@ interface AuthenticatedRequest extends Request {
 export class GatewayController {
   constructor(private readonly gatewayService: GatewayService) {}
 
+  // Handle OPTIONS requests for CORS preflight
   @Options('*')
+  handleOptions(@Res() res: Response) {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(204).send();
+  }
 
   // Health check endpoint
   @Get('health')
@@ -48,12 +56,10 @@ export class GatewayController {
   }
 
   @Post('auth/validate')
-  @UseGuards(JwtAuthGuard)
-  async validateToken(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+  async validateToken(@Req() req: Request, @Res() res: Response) {
+    // Forward the Authorization header directly to auth-service
     const headers = {
-      'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'authorization': req.headers.authorization
     };
     return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/validate', 'POST', null, headers);
   }
@@ -127,7 +133,59 @@ export class GatewayController {
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}`, 'DELETE', null, headers);
   }
 
-  // Add other product routes as needed...
+  @Patch('products/:id/stock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async updateStock(@Param('id') id: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}/stock`, 'PATCH', body, headers);
+  }
+
+  // Admin-only product listing (including inactive products)
+  @Get('products/admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getAllProductsAdmin(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('category') category: string,
+    @Query('search') search: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response
+  ) {
+    const queryParams = new URLSearchParams();
+    if (page) queryParams.append('page', page.toString());
+    if (limit) queryParams.append('limit', limit.toString());
+    if (category) queryParams.append('category', category);
+    if (search) queryParams.append('search', search);
+
+    const queryString = queryParams.toString();
+    const path = queryString ? `products/admin/all?${queryString}` : 'products/admin/all';
+    
+    const headers = {
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    
+    return this.gatewayService.proxyRequest(res, 'product-service', path, 'GET', null, headers);
+  }
+
+  @Get('products/admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getProductAdmin(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'product-service', `products/admin/${id}`, 'GET', null, headers);
+  }
 
   // ===== ORDER ROUTES =====
   @Post('orders')

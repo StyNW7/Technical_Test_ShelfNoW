@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Determine the API URL based on environment
@@ -80,27 +81,17 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+
     const url = `${API_BASE_URL}${endpoint}`;
     const token = this.getAuthToken();
     
-    const headers = new Headers();
-    // Set default content type
-    headers.set('Content-Type', 'application/json');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
 
-    // Merge any headers passed in options
-    if (options.headers) {
-      if (options.headers instanceof Headers) {
-        options.headers.forEach((value, key) => headers.set(key, value));
-      } else if (Array.isArray(options.headers)) {
-        options.headers.forEach(([key, value]) => headers.set(key, value));
-      } else {
-        Object.entries(options.headers).forEach(([key, value]) => headers.set(key, String(value)));
-      }
-    }
-
-    // Add Authorization header if token exists
     if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     try {
@@ -110,22 +101,41 @@ class ApiService {
         ...options,
       });
 
-      // Handle non-JSON responses
-      const contentType = response.headers.get('content-type');
-      let data;
-
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
-      }
-
+      // First, check if response is OK
       if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        // Try to parse error as JSON, but fallback to text
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // If JSON parsing fails, try to get text
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          } catch {
+            // Ignore text parsing errors
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      return data;
+      // If response is OK, try to parse as JSON
+      try {
+        const data = await response.json();
+        return data;
+      } catch (jsonError) {
+        // If response is OK but not JSON, return empty object for endpoints that don't return data
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+          return {} as T;
+        }
+        throw new Error('Server returned non-JSON response');
+      }
+      
     } catch (error: any) {
       if (error.message.includes('CORS') || error.message.includes('Network')) {
         throw new Error('Cannot connect to server. Please check if the API Gateway is running.');
@@ -183,14 +193,9 @@ class ApiService {
         method: 'POST',
       });
 
-      // Ensure user has role if present
-      if (response.user && !response.user.role) {
-        response.user.role = 'USER';
-      }
-
       return response;
     } catch (error: any) {
-      console.error('Token validation error:', error);
+      console.error('Token validation request failed:', error);
       // If validation fails, return invalid
       return { valid: false, error: error.message };
     }

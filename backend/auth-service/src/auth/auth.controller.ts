@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Headers,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +16,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -63,35 +65,44 @@ export class AuthController {
   @ApiOperation({ summary: 'Validate JWT token' })
   @ApiResponse({ status: 200, description: 'Token is valid' })
   @ApiResponse({ status: 401, description: 'Token is invalid' })
-  async validateToken(@Headers() headers: any) {
+  async validateToken(@Headers() headers: any, @Res() res: Response) {
     try {
       // Get the Authorization header
       const authHeader = headers.authorization;
       
       if (!authHeader) {
-        return { valid: false, error: 'No authorization header' };
+        return res.status(401).json({ 
+          valid: false, 
+          error: 'No authorization header' 
+        });
       }
 
       // Extract the token from "Bearer <token>"
       const token = authHeader.replace('Bearer ', '');
       
       if (!token) {
-        return { valid: false, error: 'No token provided' };
+        return res.status(401).json({ 
+          valid: false, 
+          error: 'No token provided' 
+        });
       }
 
       // Validate the token using AuthService
       const payload = await this.authService.validateToken(token);
       
-      return { 
+      return res.status(200).json({ 
         valid: true, 
         user: {
           userId: payload.sub,
           email: payload.email,
-          role: payload.role || payload.role?.[0] || 'USER'
+          role: payload.role || 'USER'
         }
-      };
+      });
     } catch (error) {
-      return { valid: false, error: error.message };
+      return res.status(401).json({ 
+        valid: false, 
+        error: error.message || 'Invalid token'
+      });
     }
   }
 }

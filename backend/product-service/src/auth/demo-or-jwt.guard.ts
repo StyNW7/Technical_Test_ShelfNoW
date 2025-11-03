@@ -12,14 +12,14 @@ export class DemoOrJwtGuard implements CanActivate {
 
     const authHeader: string | undefined = req.headers?.authorization || req.headers?.Authorization;
     if (authHeader) {
-      const [, tokenRaw] = authHeader.split(' ') as [string | undefined, string | undefined];
-      const token = tokenRaw ?? authHeader;
+      const parts = authHeader.split(' ');
+      const token = parts.length > 1 ? parts[1] : parts[0];
       if (token === this.demoToken) {
         return true;
       }
     }
 
-    const JwtGuardClass: any = AuthGuard('jwt') as any;
+    const JwtGuardClass: any = (AuthGuard('jwt') as any);
     const jwtGuard = new JwtGuardClass();
     return jwtGuard.canActivate(context) as Promise<boolean>;
   }
