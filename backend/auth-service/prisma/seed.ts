@@ -1,5 +1,6 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from '../src/common/enums/user-role-enum';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +18,7 @@ async function main() {
       firstName: 'Admin',
       lastName: 'User',
       role: UserRole.ADMIN,
-    },
+    } as any,
   });
 
   // Create regular user
@@ -31,7 +32,7 @@ async function main() {
       firstName: 'Regular',
       lastName: 'User',
       role: UserRole.USER,
-    },
+    } as any,
   });
 
   console.log('Seeding completed!');

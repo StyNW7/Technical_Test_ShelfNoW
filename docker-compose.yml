@@ -27,7 +27,7 @@ services:
   #   ports:
   #     - "3002:3002"
   #   environment:
-  #     - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_product_db
+  #     - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_product_db
   #   depends_on:
   #     mysql:
   #       condition: service_healthy
@@ -44,7 +44,7 @@ services:
   #   ports:
   #     - "3003:3003"
   #   environment:
-  #     - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_order_db
+  #     - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_order_db
   #   depends_on:
   #     mysql:
   #       condition: service_healthy
@@ -61,10 +61,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shelfnow_auth_db
     ports:
-      - "3306:3306"
+      - "3307:3306"  # Changed from 3306:3306 to 3307:3306
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       timeout: 20s
