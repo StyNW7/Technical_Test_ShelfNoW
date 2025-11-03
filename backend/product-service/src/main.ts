@@ -17,10 +17,7 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.enableCors({
-    origin: ['http://localhost:3000', 'http://frontend:3000'],
-    credentials: true,
-  });
+  app.enableCors();
 
   // Microservice setup
   app.connectMicroservice<MicroserviceOptions>({
@@ -33,7 +30,7 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   await app.listen(3002);
-  console.log('Product service is running on port 3002');
-  console.log('Product microservice is running on port 3004');
+  console.log('Auth service is running on port 3002');
+  console.log('Auth microservice is running on port 3004');
 }
 bootstrap();

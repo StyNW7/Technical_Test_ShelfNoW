@@ -15,7 +15,7 @@ export class AuthGuard implements CanActivate {
     const token = this.extractTokenFromHeader(request);
     
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('No token provided');
     }
     
     try {
@@ -23,9 +23,10 @@ export class AuthGuard implements CanActivate {
         secret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
       });
       
+      // Attach user to request
       request['user'] = payload;
-    } catch {
-      throw new UnauthorizedException();
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token');
     }
     
     return true;

@@ -57,7 +57,7 @@ function App() {
 
                 <Route path="/shop" element={<ShopPage/>} />
 
-                <Route path="/shop/:id" element={<BookDetailPage/>} />
+                <Route path="/book/:id" element={<BookDetailPage/>} />
 
                 <Route path="*" element={<NotFoundPage />} />
 
