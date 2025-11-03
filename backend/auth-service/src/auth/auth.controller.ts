@@ -2,18 +2,31 @@ import {
   Controller,
   Post,
   Body,
+  UseGuards,
   Get,
+  Request,
+  HttpCode,
+  HttpStatus,
   Headers,
-  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -21,6 +34,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
@@ -36,34 +50,48 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('profile')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'Return user profile' })
-  getProfile(@Headers() headers: any) {
-    // Validate user from headers set by gateway
-    const userId = headers['x-user-id'];
-    const email = headers['x-user-email'];
-    const role = headers['x-user-role'];
-
-    if (!userId || !email || !role) {
-      throw new UnauthorizedException('User information missing from headers');
-    }
-
-    return { userId, email, role };
+  getProfile(@Request() req: AuthenticatedRequest) {
+    return req.user;
   }
 
   @Post('validate')
   @ApiOperation({ summary: 'Validate JWT token' })
   @ApiResponse({ status: 200, description: 'Token is valid' })
-  validateToken(@Headers() headers: any) {
-    const userId = headers['x-user-id'];
-    const email = headers['x-user-email'];
-    const role = headers['x-user-role'];
+  @ApiResponse({ status: 401, description: 'Token is invalid' })
+  async validateToken(@Headers() headers: any) {
+    try {
+      // Get the Authorization header
+      const authHeader = headers.authorization;
+      
+      if (!authHeader) {
+        return { valid: false, error: 'No authorization header' };
+      }
 
-    if (!userId || !email || !role) {
-      throw new UnauthorizedException('Invalid token');
+      // Extract the token from "Bearer <token>"
+      const token = authHeader.replace('Bearer ', '');
+      
+      if (!token) {
+        return { valid: false, error: 'No token provided' };
+      }
+
+      // Validate the token using AuthService
+      const payload = await this.authService.validateToken(token);
+      
+      return { 
+        valid: true, 
+        user: {
+          userId: payload.sub,
+          email: payload.email,
+          role: payload.role || payload.role?.[0] || 'USER'
+        }
+      };
+    } catch (error) {
+      return { valid: false, error: error.message };
     }
-
-    return { valid: true, user: { userId, email, role } };
   }
 }

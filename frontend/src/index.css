@@ -4,50 +4,70 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* Light mode - minimalist black and white */
+    --background: 0 0% 100%;          /* White */
+    --foreground: 0 0% 10%;           /* Almost black text */
+
+    --card: 0 0% 100%;                /* White card */
+    --card-foreground: 0 0% 10%;      /* Black text */
+
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 57.8%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 0 0% 10%;              /* Black buttons, accents */
+    --primary-foreground: 0 0% 100%;  /* White text on black */
+
+    --secondary: 0 0% 96%;            /* Light gray background sections */
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 90%;                /* Muted gray backgrounds */
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 90%;               /* Subtle hover color */
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84% 40%;         /* Darker red for errors */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 85%;               /* Light gray borders */
+    --input: 0 0% 85%;
+    --ring: 0 0% 10%;                 /* Black ring/focus outline */
+
     --radius: 1rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263.4 70% 50.4%;
+    /* Dark mode - inverted minimalist */
+    --background: 0 0% 6%;            /* Almost black */
+    --foreground: 0 0% 96%;           /* White text */
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 0 0% 100%;             /* White buttons/accent */
+    --primary-foreground: 0 0% 6%;    /* Black text on white */
+
+    --secondary: 0 0% 15%;            /* Dark gray sections */
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
   }
 }
+
 
 @layer base {
   * {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res, UseGuards, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res, UseGuards, Headers, Options } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { GatewayService } from './gateway.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -16,6 +16,8 @@ interface AuthenticatedRequest extends Request {
 @Controller()
 export class GatewayController {
   constructor(private readonly gatewayService: GatewayService) {}
+
+  @Options('*')
 
   // Health check endpoint
   @Get('health')

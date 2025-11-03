@@ -5,8 +5,9 @@ import { apiService, type AuthResponse } from '../services/api';
 interface User {
   id: string;
   email: string;
-  name: string;
-  roles: string[];
+  firstName: string;
+  lastName: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -14,7 +15,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -45,19 +46,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const token = localStorage.getItem('access_token');
     const savedUser = localStorage.getItem('user');
 
+    console.log('AuthProvider: Checking auth - Token exists:', !!token, 'User exists:', !!savedUser);
+
     if (token && savedUser) {
       try {
-        // Validate token with backend
+        console.log('AuthProvider: Validating token with server...');
         const response = await apiService.validateToken();
-        if (response.valid) {
-          setUser(JSON.parse(savedUser));
+        console.log('AuthProvider: Token validation response:', response);
+        
+        if (response.valid && response.user) {
+          // Ensure user has role
+          const userData = {
+            ...response.user,
+            role: response.user.role || 'USER'
+          };
+          console.log('AuthProvider: Setting user data:', userData);
+          setUser(userData);
+          // Update localStorage with corrected user data
+          localStorage.setItem('user', JSON.stringify(userData));
         } else {
-          logout();
+          console.log('AuthProvider: Token invalid, response:', response);
+          // Use saved user as fallback if validation fails but we have a token
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            if (parsedUser && parsedUser.id) {
+              const userData = {
+                ...parsedUser,
+                role: parsedUser.role || 'USER'
+              };
+              setUser(userData);
+              console.log('AuthProvider: Using saved user as fallback');
+            } else {
+              logout();
+            }
+          } catch (parseError) {
+            console.error('AuthProvider: Failed to parse saved user:', parseError);
+            logout();
+          }
         }
       } catch (error) {
-        console.error('Token validation failed:', error);
-        logout();
+        console.error('AuthProvider: Token validation failed:', error);
+        // Use saved user as fallback
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          if (parsedUser && parsedUser.id) {
+            const userData = {
+              ...parsedUser,
+              role: parsedUser.role || 'USER'
+            };
+            setUser(userData);
+            console.log('AuthProvider: Using saved user after validation error');
+          } else {
+            logout();
+          }
+        } catch (parseError) {
+          console.error('AuthProvider: Failed to parse saved user:', parseError);
+          logout();
+        }
       }
+    } else {
+      console.log('AuthProvider: No token or user found');
+      logout(); // Clear any invalid data
     }
     setLoading(false);
   };
@@ -66,21 +115,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response: AuthResponse = await apiService.login({ email, password });
       
+      // Ensure user data has role
+      const userData = {
+        ...response.user,
+        role: response.user.role || 'USER'
+      };
+      
       localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
     } catch (error: any) {
       throw new Error(error.message || 'Login failed');
     }
   };
 
-  const register = async (name: string, email: string, password: string): Promise<void> => {
+  const register = async (firstName: string, lastName: string, email: string, password: string): Promise<void> => {
     try {
-      const response: AuthResponse = await apiService.register({ name, email, password });
+      const response: AuthResponse = await apiService.register({ firstName, lastName, email, password });
+      
+      // Ensure user data has role
+      const userData = {
+        ...response.user,
+        role: response.user.role || 'USER'
+      };
       
       localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
     } catch (error: any) {
       throw new Error(error.message || 'Registration failed');
     }
@@ -92,10 +153,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  // Safe role checking
+  const isAdmin = user?.role === 'ADMIN';
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
-    isAdmin: user?.roles.includes('admin') || false,
+    isAdmin,
     login,
     register,
     logout,

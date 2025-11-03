@@ -2,18 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import axios from 'axios';
 
-interface ServiceConfig {
-  url: string;
-  timeout: number;
-}
-
 @Injectable()
 export class GatewayService {
-  private services: Map<string, ServiceConfig> = new Map([
-    ['auth-service', { url: 'http://auth-service:3001', timeout: 5000 }],
-    ['product-service', { url: 'http://product-service:3002', timeout: 5000 }],
-    ['order-service', { url: 'http://order-service:3003', timeout: 8000 }],
-  ]);
+  private services = {
+    'auth-service': 'http://auth-service:3001',
+    'product-service': 'http://product-service:3002',
+    'order-service': 'http://order-service:3003',
+  };
 
   async proxyRequest(
     res: Response,
@@ -23,51 +18,53 @@ export class GatewayService {
     body?: any,
     headers?: any,
   ): Promise<void> {
-    const service = this.services.get(serviceName);
+    const serviceUrl = this.services[serviceName];
     
-    if (!service) {
+    if (!serviceUrl) {
       res.status(502).json({ error: 'Service unavailable' });
       return;
     }
 
     try {
-      const url = `${service.url}/${path}`;
-      
-      // Prepare headers
-      const requestHeaders = {
-        'Content-Type': 'application/json',
-        ...headers,
-      };
-
+      const url = `${serviceUrl}/${path}`;
       const config = {
         method,
         url,
         data: body,
-        headers: requestHeaders,
-        timeout: service.timeout,
-        validateStatus: () => true, // Don't throw on HTTP errors
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        timeout: 5000,
       };
 
       console.log(`Proxying ${method} ${path} to ${serviceName}`);
       
       const response = await axios(config);
       
-      // Forward the exact response from the service
+      // Add CORS headers to the response
+      res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
       res.status(response.status).json(response.data);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Gateway error for ${serviceName}:`, error.message);
+      
+      // Add CORS headers to error responses as well
+      res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+      res.header('Access-Control-Allow-Credentials', 'true');
       
       if (error.code === 'ECONNREFUSED') {
         res.status(503).json({ 
           error: 'Service temporarily unavailable',
-          message: `${serviceName} is not responding` 
+          service: serviceName
         });
       } else if (error.response) {
-        // Service responded with error status
         res.status(error.response.status).json(error.response.data);
       } else {
-        // Other errors
         res.status(500).json({ 
           error: 'Internal gateway error',
           message: error.message 

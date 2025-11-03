@@ -13,6 +13,7 @@ export class User {
   role: string;
   createdAt: Date;
   updatedAt: Date;
+  sub: any;
 
   constructor(partial: Partial<PrismaUser>) {
     Object.assign(this, partial);

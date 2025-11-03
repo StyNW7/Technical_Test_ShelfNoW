@@ -62,13 +62,13 @@ export function Navbar() {
                 {isAdmin && (
                   <a
                     href="/admin"
-                    className="text-gray-700 hover:text-indigo-600"
+                    className="text-gray-700 hover:text-black"
                   >
                     Admin Dashboard
                   </a>
                 )}
                 <span className="text-gray-700">
-                  Welcome, {user?.name}
+                  Welcome, {user?.firstName}
                 </span>
                 <button
                   onClick={handleLogout}
@@ -81,13 +81,13 @@ export function Navbar() {
               <>
                 <a
                   href="/login"
-                  className="text-gray-700 hover:text-indigo-600"
+                  className="text-gray-700 hover:text-black"
                 >
                   Login
                 </a>
                 <a
                   href="/register"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                  className="bg-black text-white px-4 py-2 rounded "
                 >
                   Register
                 </a>
@@ -120,9 +120,46 @@ export function Navbar() {
                   {item.label}
                 </a>
               ))}
-              <button className="w-full mt-2 px-4 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all hover:bg-white hover:text-black">
-                Browse Books
-              </button>
+
+              <div className="flex items-center space-x-4">
+                {isAuthenticated ? (
+                  <>
+                    {isAdmin && (
+                      <a
+                        href="/admin"
+                        className="text-gray-700 hover:text-black"
+                      >
+                        Admin Dashboard
+                      </a>
+                    )}
+                    <span className="text-gray-700">
+                      Welcome, {user?.firstName}
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <a
+                      href="/login"
+                      className="text-gray-700 hover:text-black"
+                    >
+                      Login
+                    </a>
+                    <a
+                      href="/register"
+                      className="bg-black text-white px-4 py-2 rounded "
+                    >
+                      Register
+                    </a>
+                  </>
+                )}
+              </div>
+
             </div>
           </div>
         )}

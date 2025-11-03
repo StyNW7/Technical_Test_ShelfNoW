@@ -10,7 +10,8 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
 }
@@ -20,8 +21,9 @@ export interface AuthResponse {
   user: {
     id: string;
     email: string;
-    name: string;
-    roles: string[];
+    firstName: string;
+    lastName: string;
+    role: string;
   };
 }
 
@@ -81,54 +83,117 @@ class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = this.getAuthToken();
     
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
+    const headers = new Headers();
+    // Set default content type
+    headers.set('Content-Type', 'application/json');
+
+    // Merge any headers passed in options
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => headers.set(key, value));
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => headers.set(key, value));
+      } else {
+        Object.entries(options.headers).forEach(([key, value]) => headers.set(key, String(value)));
+      }
+    }
 
     // Add Authorization header if token exists
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
-    const response = await fetch(url, {
-      headers,
-      ...options,
-    });
+    try {
+      const response = await fetch(url, {
+        headers,
+        credentials: 'include',
+        ...options,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        message: `HTTP error! status: ${response.status}` 
-      }));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data;
+
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error: any) {
+      if (error.message.includes('CORS') || error.message.includes('Network')) {
+        throw new Error('Cannot connect to server. Please check if the API Gateway is running.');
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   // ===== AUTH ENDPOINTS =====
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/login', {
+    const response = await this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+
+    // Ensure response has the expected structure
+    if (!response.user || !response.access_token) {
+      throw new Error('Invalid response from server');
+    }
+
+    // Ensure user has role
+    if (!response.user.role) {
+      response.user.role = 'USER';
+    }
+
+    return response;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/register', {
+    const response = await this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+
+    // Ensure response has the expected structure
+    if (!response.user || !response.access_token) {
+      throw new Error('Invalid response from server');
+    }
+
+    // Ensure user has role
+    if (!response.user.role) {
+      response.user.role = 'USER';
+    }
+
+    return response;
   }
 
   async getProfile(): Promise<any> {
     return this.request<any>('/auth/profile');
   }
 
-  async validateToken(): Promise<{ valid: boolean; user?: any }> {
-    return this.request<{ valid: boolean; user?: any }>('/auth/validate', {
-      method: 'POST',
-    });
+  async validateToken(): Promise<{ valid: boolean; user?: any; error?: string }> {
+    try {
+      const response = await this.request<{ valid: boolean; user?: any; error?: string }>('/auth/validate', {
+        method: 'POST',
+      });
+
+      // Ensure user has role if present
+      if (response.user && !response.user.role) {
+        response.user.role = 'USER';
+      }
+
+      return response;
+    } catch (error: any) {
+      console.error('Token validation error:', error);
+      // If validation fails, return invalid
+      return { valid: false, error: error.message };
+    }
   }
 
   // ===== PRODUCT ENDPOINTS (Public) =====
