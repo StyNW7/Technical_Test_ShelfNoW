@@ -1,34 +1,19 @@
-FROM node:18-alpine As development
+FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
+# Copy package files first (for better caching)
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY tsconfig*.json ./
 
+# Install dependencies
 RUN npm install
 
-RUN npx prisma generate
+# Copy source code
+COPY src/ ./src/
 
-COPY . .
-
-RUN npm run build
-
-FROM node:18-alpine as production
-
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-
-WORKDIR /usr/src/app
-
-COPY package*.json ./
-COPY prisma ./prisma/
-
-RUN npm install --only=production
-
-RUN npx prisma generate
-
-COPY --from=development /usr/src/app/dist ./dist
-
+# Expose port
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+# Development command (will be overridden by docker-compose for development)
+CMD ["npm", "run", "start:dev"]

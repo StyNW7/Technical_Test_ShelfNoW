@@ -95,9 +95,15 @@ services:
       - product-service
       - order-service
     volumes:
-      - ./backend/gateway:/usr/src/app
+      - ./backend/api-gateway:/usr/src/app
       - /usr/src/app/node_modules
     command: npm run start:dev
+    healthcheck:
+      test: ["CMD", "node", "health-check.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mysql:
     image: mysql:8.0
