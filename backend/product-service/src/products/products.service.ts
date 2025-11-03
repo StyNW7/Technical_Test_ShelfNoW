@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -8,24 +8,52 @@ export class ProductsService {
   private prisma = new PrismaClient();
 
   async create(createProductDto: CreateProductDto) {
-    return this.prisma.product.create({
-      data: createProductDto,
-    });
+    try {
+      // Check if ISBN already exists (if provided)
+      if (createProductDto.isbn) {
+        const existingProduct = await this.prisma.product.findFirst({
+          where: {
+            isbn: createProductDto.isbn,
+            isActive: true,
+          },
+        });
+
+        if (existingProduct) {
+          throw new ConflictException('A product with this ISBN already exists');
+        }
+      }
+
+      return await this.prisma.product.create({
+        data: {
+          ...createProductDto,
+          isActive: true,
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('A product with this ISBN already exists');
+      }
+      throw error;
+    }
   }
 
   async findAll(
     page: number = 1,
     limit: number = 10,
     category?: string,
-    search?: string
+    search?: string,
+    includeInactive: boolean = false
   ) {
     const skip = (page - 1) * limit;
     
-    const where: any = {
-      isActive: true,
-    };
+    const where: any = {};
 
-    if (category) {
+    // Only show active products by default
+    if (!includeInactive) {
+      where.isActive = true;
+    }
+
+    if (category && category !== 'All') {
       where.category = category;
     }
 
@@ -72,12 +100,33 @@ export class ProductsService {
 
   async update(id: string, updateProductDto: UpdateProductDto) {
     try {
+      // Check if ISBN already exists for other products (if provided)
+      if (updateProductDto.isbn) {
+        const existingProduct = await this.prisma.product.findFirst({
+          where: {
+            isbn: updateProductDto.isbn,
+            id: { not: id },
+            isActive: true,
+          },
+        });
+
+        if (existingProduct) {
+          throw new ConflictException('A product with this ISBN already exists');
+        }
+      }
+
       return await this.prisma.product.update({
         where: { id },
         data: updateProductDto,
       });
     } catch (error) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      if (error.code === 'P2002') {
+        throw new ConflictException('A product with this ISBN already exists');
+      }
+      throw error;
     }
   }
 
@@ -89,7 +138,39 @@ export class ProductsService {
         data: { isActive: false },
       });
     } catch (error) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async permanentRemove(id: string) {
+    try {
+      // Permanent delete from database
+      return await this.prisma.product.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async restore(id: string) {
+    try {
+      // Restore soft-deleted product
+      return await this.prisma.product.update({
+        where: { id },
+        data: { isActive: true },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      throw error;
     }
   }
 
@@ -128,5 +209,15 @@ export class ProductsService {
       }
       throw new Error(`Failed to update stock: ${error.message}`);
     }
+  }
+
+  // Get all products including inactive (for admin)
+  async findAllAdmin(
+    page: number = 1,
+    limit: number = 10,
+    category?: string,
+    search?: string
+  ) {
+    return this.findAll(page, limit, category, search, true);
   }
 }
