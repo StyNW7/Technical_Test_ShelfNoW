@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useMemo, type SetStateAction } from "react"
-import { Navbar } from "@/components/Navbar"
-import { Footer } from "@/components/Footer"
 import { BookCard } from "@/components/shop/book-card"
 import { FilterSidebar } from "@/components/shop/filter-sidebar"
 import { Input } from "@/components/ui/input"
@@ -59,7 +57,6 @@ export default function ShopPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <Navbar />
 
       {/* Page Header */}
       <section className="border-b-2 border-black py-12 md:py-16">
@@ -182,7 +179,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      <Footer />
     </main>
   )
 }

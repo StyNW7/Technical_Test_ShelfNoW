@@ -2,8 +2,6 @@
 "use client"
 
 import { useState } from "react"
-import { Navbar } from "@/components/Navbar"
-import { Footer } from "@/components/Footer"
 import { Button } from "@/components/ui/button"
 import { mockBooks } from "@/lib/mock-books"
 import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check } from "lucide-react"
@@ -23,7 +21,6 @@ export default function BookDetailPage() {
   if (!book) {
     return (
       <main className="min-h-screen bg-white">
-        <Navbar />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-4">Book Not Found</h1>
@@ -35,7 +32,6 @@ export default function BookDetailPage() {
             </a>
           </div>
         </div>
-        <Footer />
       </main>
     )
   }
@@ -51,7 +47,6 @@ export default function BookDetailPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <Navbar />
 
       {/* Breadcrumb */}
       <div className="border-b-2 border-black">
@@ -233,7 +228,6 @@ export default function BookDetailPage() {
         </div>
       </section>
 
-      <Footer />
     </main>
   )
 }
