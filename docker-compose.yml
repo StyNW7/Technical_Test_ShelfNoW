@@ -28,7 +28,7 @@ services:
     ports:
       - "3002:3002"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_product_db
+      - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_product_db
     depends_on:
       mysql:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
     ports:
       - "3003:3003"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3307/shelfnow_order_db
+      - DATABASE_URL=mysql://root:root@mysql:3306/shelfnow_order_db
     depends_on:
       mysql:
         condition: service_healthy
