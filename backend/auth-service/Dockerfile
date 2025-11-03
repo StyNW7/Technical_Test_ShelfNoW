@@ -1,18 +1,34 @@
-# build stage
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-RUN npm prune --production
+FROM node:18-alpine As development
 
-# runtime
-FROM node:20-alpine
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+WORKDIR /usr/src/app
+
 COPY package*.json ./
-EXPOSE 3000
-CMD ["node", "dist/main.js"]
+COPY prisma ./prisma/
+
+RUN npm install
+
+COPY . .
+
+RUN npx prisma generate
+
+RUN npm run build
+
+FROM node:18-alpine as production
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm install --only=production
+
+COPY . .
+
+COPY --from=development /usr/src/app/dist ./dist
+
+EXPOSE 3001
+
+CMD ["node", "dist/main"]

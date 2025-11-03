@@ -1,33 +1,47 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { PrismaClient, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  const password = await bcrypt.hash('admin123', 10);
+  console.log('Seeding database...');
 
-  const admin = await prisma.user.upsert({
+  // Create admin user
+  const adminPassword = await bcrypt.hash('admin123', 12);
+  await prisma.user.upsert({
     where: { email: 'admin@shelfnow.com' },
     update: {},
     create: {
-      name: 'Admin ShelfNow',
       email: 'admin@shelfnow.com',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      password,
-      role: 'ADMIN',
+      password: adminPassword,
+      firstName: 'Admin',
+      lastName: 'User',
+      role: UserRole.ADMIN,
     },
   });
 
-  console.log('Seeded admin:', admin);
+  // Create regular user
+  const userPassword = await bcrypt.hash('user123', 12);
+  await prisma.user.upsert({
+    where: { email: 'user@shelfnow.com' },
+    update: {},
+    create: {
+      email: 'user@shelfnow.com',
+      password: userPassword,
+      firstName: 'Regular',
+      lastName: 'User',
+      role: UserRole.USER,
+    },
+  });
+
+  console.log('Seeding completed!');
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
