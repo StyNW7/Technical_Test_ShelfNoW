@@ -2,28 +2,18 @@ import {
   Controller,
   Post,
   Body,
-  UseGuards,
   Get,
-  Request,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-    role: string;
-  };
-}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -46,21 +36,34 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('profile')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'Return user profile' })
-  getProfile(@Request() req: AuthenticatedRequest) {
-    return req.user;
+  getProfile(@Headers() headers: any) {
+    // Validate user from headers set by gateway
+    const userId = headers['x-user-id'];
+    const email = headers['x-user-email'];
+    const role = headers['x-user-role'];
+
+    if (!userId || !email || !role) {
+      throw new UnauthorizedException('User information missing from headers');
+    }
+
+    return { userId, email, role };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('validate')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Validate JWT token' })
   @ApiResponse({ status: 200, description: 'Token is valid' })
-  validateToken(@Request() req: AuthenticatedRequest) {
-    return { valid: true, user: req.user };
+  validateToken(@Headers() headers: any) {
+    const userId = headers['x-user-id'];
+    const email = headers['x-user-email'];
+    const role = headers['x-user-role'];
+
+    if (!userId || !email || !role) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    return { valid: true, user: { userId, email, role } };
   }
 }

@@ -1,7 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import axios from 'axios';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -9,22 +8,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'your-super-secret-key',
+      secretOrKey: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
     });
   }
 
   async validate(payload: any) {
-    // Validate token with auth service for additional security
-    try {
-      // For simplicity, we're just validating the JWT locally
-      // In production, you might want to call auth service to validate
-      return { 
-        userId: payload.sub, 
-        email: payload.email, 
-        roles: payload.roles 
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token');
+    // Your JWT payload structure from auth service
+    // Based on your auth service, it should contain userId, email, and role
+    console.log('JWT Payload:', payload);
+    
+    if (!payload.sub || !payload.email || !payload.role) {
+      throw new UnauthorizedException('Invalid token payload');
     }
+
+    return { 
+      userId: payload.sub, 
+      email: payload.email, 
+      role: payload.role 
+    };
   }
 }

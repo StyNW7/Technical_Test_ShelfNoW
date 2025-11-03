@@ -7,26 +7,35 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
+  Headers,
   ParseIntPipe,
   DefaultValuePipe,
+  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { AuthGuard } from '../auth/auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/guards/roles.decorators';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // CREATE - Admin only
+  // Helper method to check admin role from headers
+  private checkAdminRole(headers: any): void {
+    const userRole = headers['x-user-role'];
+    if (!userRole || userRole !== 'admin') {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+  }
+
+  // CREATE - Admin only (now checked via headers from gateway)
   @Post()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  create(@Body() createProductDto: CreateProductDto) {
+  create(
+    @Body() createProductDto: CreateProductDto,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.create(createProductDto);
   }
 
@@ -53,68 +62,78 @@ export class ProductsController {
     return this.productsService.findOne(id);
   }
 
-  // UPDATE - Admin only
+  // UPDATE - Admin only (now checked via headers from gateway)
   @Patch(':id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  update(
+    @Param('id') id: string, 
+    @Body() updateProductDto: UpdateProductDto,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.update(id, updateProductDto);
   }
 
-  // DELETE - Admin only (soft delete)
+  // DELETE - Admin only (now checked via headers from gateway)
   @Delete(':id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  remove(@Param('id') id: string) {
+  remove(
+    @Param('id') id: string,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.remove(id);
   }
 
-  // UPDATE STOCK - Admin only
+  // UPDATE STOCK - Admin only (now checked via headers from gateway)
   @Patch(':id/stock')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
   updateStock(
     @Param('id') id: string,
     @Body('quantity') quantity: number,
+    @Headers() headers: any
   ) {
+    this.checkAdminRole(headers);
     return this.productsService.updateStock(id, quantity);
   }
 
-  // HARD DELETE - Admin only (permanent delete)
+  // HARD DELETE - Admin only (now checked via headers from gateway)
   @Delete(':id/permanent')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  permanentRemove(@Param('id') id: string) {
+  permanentRemove(
+    @Param('id') id: string,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.permanentRemove(id);
   }
 
-  // RESTORE - Admin only (restore soft-deleted product)
+  // RESTORE - Admin only (now checked via headers from gateway)
   @Patch(':id/restore')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  restore(@Param('id') id: string) {
+  restore(
+    @Param('id') id: string,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.restore(id);
   }
 
-  // GET all products including inactive (Admin only)
+  // GET all products including inactive (Admin only - now checked via headers)
   @Get('admin/all')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
   async findAllAdmin(
+    @Headers() headers: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
+    this.checkAdminRole(headers);
     return this.productsService.findAllAdmin(page, limit, category, search);
   }
 
-  // GET product by ID including inactive (Admin only)
+  // GET product by ID including inactive (Admin only - now checked via headers)
   @Get('admin/:id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  findOneAdmin(@Param('id') id: string) {
+  findOneAdmin(
+    @Param('id') id: string,
+    @Headers() headers: any
+  ) {
+    this.checkAdminRole(headers);
     return this.productsService.findOne(id);
   }
-
 }
