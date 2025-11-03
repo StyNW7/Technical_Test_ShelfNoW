@@ -26,6 +26,7 @@ import RegisterPage from "./pages/Auth/Register";
 import ShopPage from "./pages/Shop/Store";
 import BookDetailPage from "./pages/Shop/[id]/Book";
 import AdminPage from "./pages/Admin/page";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
 
@@ -60,7 +61,11 @@ function App() {
 
                 <Route path="/book/:id" element={<BookDetailPage/>} />
 
-                <Route path="/admin" element={<AdminPage/>} />
+                <Route path="/admin" element={
+                  <ProtectedRoute adminOnly>
+                    <AdminPage/>
+                  </ProtectedRoute>
+              } />
 
                 <Route path="*" element={<NotFoundPage />} />
 

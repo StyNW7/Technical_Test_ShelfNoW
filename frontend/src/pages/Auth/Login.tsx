@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { useNavigate } from 'react-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -9,20 +10,24 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+  const { login, isAuthenticated, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(isAdmin ? '/admin' : '/');
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const response = await apiService.login({ email, password });
-      
-      // Store token in localStorage or context
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Redirect to Admin Dashboard
-      window.location.href = '/admin';
+      await login(email, password);
+      // Navigation will be handled by the useEffect above
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

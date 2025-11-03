@@ -3,8 +3,16 @@
 import { useState } from "react"
 import { Menu, X, ShoppingCart } from "lucide-react"
 import { useNavigate } from "react-router"
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Navbar() {
+
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
 
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
@@ -47,9 +55,46 @@ export function Navbar() {
               <ShoppingCart size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-black rounded-full"></span>
             </button>
-            <button className="px-6 py-2.5 bg-black text-white border border-black font-medium text-sm transition-all duration-300 hover:bg-white hover:text-black" onClick={() => navigate("/login")}>
-              Login
-            </button>
+
+            <div className="flex items-center space-x-4">
+            {isAuthenticated ? (
+              <>
+                {isAdmin && (
+                  <a
+                    href="/admin"
+                    className="text-gray-700 hover:text-indigo-600"
+                  >
+                    Admin Dashboard
+                  </a>
+                )}
+                <span className="text-gray-700">
+                  Welcome, {user?.name}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  className="text-gray-700 hover:text-indigo-600"
+                >
+                  Login
+                </a>
+                <a
+                  href="/register"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                >
+                  Register
+                </a>
+              </>
+            )}
+          </div>
+
           </div>
 
           {/* Mobile Menu Button */}
