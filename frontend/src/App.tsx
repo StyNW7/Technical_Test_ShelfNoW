@@ -23,6 +23,8 @@ import LoadingScreen from "./pages/Utility/LoadingScreen";
 import LandingPage from "@/pages/Landing/page";
 import LoginPage from "./pages/Auth/Login";
 import RegisterPage from "./pages/Auth/Register";
+import ShopPage from "./pages/Shop/Store";
+import BookDetailPage from "./pages/Shop/[id]/Book";
 
 function App() {
 
@@ -52,6 +54,10 @@ function App() {
                 <Route index element={<LandingPage/>} />
                 <Route path="/login" element={<LoginPage/>} />
                 <Route path="/register" element={<RegisterPage/>} />
+
+                <Route path="/shop" element={<ShopPage/>} />
+
+                <Route path="/book/:id" element={<BookDetailPage/>} />
 
                 <Route path="*" element={<NotFoundPage />} />
 

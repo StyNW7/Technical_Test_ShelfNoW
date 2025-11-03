@@ -159,9 +159,10 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500 animate-fade-in" style={{ animationDelay: '0.7s' }}>
-          © 2024 ShelfNoW. All rights reserved.
-        </div>
+        {/* <div className="mt-8 text-center text-sm text-gray-500 animate-fade-in" style={{ animationDelay: '0.7s' }}>
+          © 2025 ShelfNoW. All rights reserved.
+        </div> */}
+
       </div>
     </div>
   );
