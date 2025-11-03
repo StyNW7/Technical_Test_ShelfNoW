@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { BookOpen, Check } from 'lucide-react';
+import { apiService } from '@/services/api';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -27,14 +29,9 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
 
-    // Validation
-    if (
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
+    // Validation (same as before)
+    if (!formData.firstName || !formData.lastName || !formData.email || 
+        !formData.password || !formData.confirmPassword) {
       setError('Please fill in all fields');
       setIsLoading(false);
       return;
@@ -58,11 +55,15 @@ export default function RegisterPage() {
       return;
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    setSuccess(true);
-    setIsLoading(false);
+    try {
+      const { confirmPassword, agreedToTerms, ...registerData } = formData;
+      await apiService.register(registerData);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (success) {

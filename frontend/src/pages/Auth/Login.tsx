@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { BookOpen } from 'lucide-react';
+import { apiService } from '@/services/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,16 +14,20 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    if (!email || !password) {
-      setError('Please fill in all fields');
+    try {
+      const response = await apiService.login({ email, password });
+      
+      // Store token in localStorage or context
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Redirect to dashboard or home page
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    setIsLoading(false);
-    console.log('Login attempt:', { email, password });
   };
 
   return (
