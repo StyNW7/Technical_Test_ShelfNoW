@@ -1,281 +1,145 @@
-// components/cart/checkout-modal.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState } from "react"
-import { X, CreditCard, Building, Loader2 } from "lucide-react"
+import { AlertCircle, Check, Loader2 } from "lucide-react"
 
 interface CheckoutModalProps {
   isOpen: boolean
   totalAmount: number
   totalItems: number
-  onConfirm: (data: {
-    paymentMethod: string;
-    shippingAddress: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      country: string;
-    };
-    paymentDetails: {
-      bank?: string;
-      cardNumber?: string;
-      expiryDate?: string;
-      cvv?: string;
-    };
-  }) => void
+  onConfirm: () => Promise<void> // Ubah tipe agar menerima Promise
   onCancel: () => void
-  loading?: boolean
 }
 
-export function CheckoutModal({ 
-  isOpen, 
-  totalAmount, 
-  totalItems, 
-  onConfirm, 
-  onCancel, 
-  loading = false 
-}: CheckoutModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState("CREDIT_CARD")
-  const [shippingAddress, setShippingAddress] = useState({
-    street: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "Indonesia"
-  })
-  const [paymentDetails, setPaymentDetails] = useState({
-    bank: "BCA",
-    cardNumber: "",
-    expiryDate: "",
-    cvv: ""
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onConfirm({
-      paymentMethod,
-      shippingAddress,
-      paymentDetails: paymentMethod === "CREDIT_CARD" ? paymentDetails : { bank: paymentDetails.bank }
-    })
-  }
+export function CheckoutModal({ isOpen, totalAmount, totalItems, onConfirm, onCancel }: CheckoutModalProps) {
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isComplete, setIsComplete] = useState(false)
+  const [error, setError] = useState<string | null>(null) // State untuk error
 
   if (!isOpen) return null
 
+  // ===== PERBAIKAN UTAMA DI SINI =====
+  const handleConfirm = async () => {
+    setIsProcessing(true)
+    setError(null)
+
+    try {
+      // 1. Panggil fungsi onConfirm yang asli (dari page.tsx)
+      await onConfirm(); 
+
+      // 2. Jika berhasil, tampilkan status sukses
+      setIsProcessing(false)
+      setIsComplete(true)
+
+      // 3. Tutup modal dan arahkan (ditangani oleh onConfirm di page.tsx)
+      //    Kita hanya perlu menunggu sebelum mereset state modal
+      setTimeout(() => {
+        // onConfirm() sudah dipanggil, jadi kita hanya perlu mereset modal
+        setIsComplete(false)
+        // onCancel() akan menutup modal jika onConfirm tidak mengarahkan
+      }, 2000) // Tampilkan sukses selama 2 detik
+
+    } catch (err: any) {
+      // 4. Jika gagal, tangkap error dan tampilkan
+      console.error("Checkout failed in modal:", err)
+      setError(err.message || "An unknown error occurred during checkout.")
+      setIsProcessing(false)
+      setIsComplete(false)
+    }
+  }
+  // ==================================
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
-        {/* Header */}
-        <div className="border-b-4 border-black p-6 bg-black text-white sticky top-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CreditCard size={24} />
-              <h2 className="text-2xl font-bold">Checkout</h2>
-            </div>
-            <button
-              onClick={onCancel}
-              className="p-2 hover:bg-white/20 rounded transition-colors"
-              disabled={loading}
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <p className="text-gray-300 mt-2">
-            {totalItems} item{totalItems !== 1 ? 's' : ''} • Total: ${totalAmount.toFixed(2)}
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Shipping Address */}
-          <div className="space-y-4">
-            <h3 className="font-bold text-lg uppercase tracking-wider border-b-2 border-black pb-2">
-              Shipping Address
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold uppercase mb-2">Street Address</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.street}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, street: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                  placeholder="Enter your street address"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold uppercase mb-2">City</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.city}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                  placeholder="City"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold uppercase mb-2">State/Province</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.state}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                  placeholder="State"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold uppercase mb-2">ZIP Code</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.zipCode}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                  placeholder="ZIP Code"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold uppercase mb-2">Country</label>
-                <input
-                  type="text"
-                  required
-                  value={shippingAddress.country}
-                  onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                  placeholder="Country"
-                />
+      <div
+        className="bg-white border-4 border-black max-w-md w-full animate-scale-in"
+        style={{ animationDelay: "0.1s" }}
+      >
+        {!isComplete ? (
+          <>
+            {/* Header */}
+            <div className="border-b-4 border-black p-6 bg-black text-white">
+              <div className="flex items-center gap-3">
+                <AlertCircle size={24} />
+                <h2 className="text-2xl font-bold">Confirm Order</h2>
               </div>
             </div>
-          </div>
 
-          {/* Payment Method */}
-          <div className="space-y-4">
-            <h3 className="font-bold text-lg uppercase tracking-wider border-b-2 border-black pb-2">
-              Payment Method
-            </h3>
-            
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 p-4 border-2 border-black hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="CREDIT_CARD"
-                  checked={paymentMethod === "CREDIT_CARD"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-4 h-4"
-                />
-                <CreditCard size={20} />
-                <span className="font-bold">Credit Card</span>
-              </label>
-              
-              <label className="flex items-center gap-3 p-4 border-2 border-black hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="VIRTUAL_ACCOUNT"
-                  checked={paymentMethod === "VIRTUAL_ACCOUNT"}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-4 h-4"
-                />
-                <Building size={20} />
-                <span className="font-bold">Virtual Account</span>
-              </label>
-            </div>
-
-            {/* Payment Details */}
-            {paymentMethod === "VIRTUAL_ACCOUNT" && (
-              <div className="space-y-4 p-4 border-2 border-black bg-gray-50">
-                <label className="block text-sm font-bold uppercase mb-2">Bank</label>
-                <select
-                  value={paymentDetails.bank}
-                  onChange={(e) => setPaymentDetails(prev => ({ ...prev, bank: e.target.value }))}
-                  className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                >
-                  <option value="BCA">BCA</option>
-                  <option value="BNI">BNI</option>
-                  <option value="BRI">BRI</option>
-                  <option value="MANDIRI">Mandiri</option>
-                </select>
-              </div>
-            )}
-
-            {paymentMethod === "CREDIT_CARD" && (
-              <div className="space-y-4 p-4 border-2 border-black bg-gray-50">
-                <div>
-                  <label className="block text-sm font-bold uppercase mb-2">Card Number</label>
-                  <input
-                    type="text"
-                    required
-                    value={paymentDetails.cardNumber}
-                    onChange={(e) => setPaymentDetails(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                    placeholder="1234 5678 9012 3456"
-                  />
+            {/* Content */}
+            <div className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b-2 border-black pb-3">
+                  <span className="font-bold uppercase text-gray-700">Total Items</span>
+                  <span className="text-2xl font-bold">{totalItems}</span>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Expiry Date</label>
-                    <input
-                      type="text"
-                      required
-                      value={paymentDetails.expiryDate}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, expiryDate: e.target.value }))}
-                      className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                      placeholder="MM/YY"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-bold uppercase mb-2">CVV</label>
-                    <input
-                      type="text"
-                      required
-                      value={paymentDetails.cvv}
-                      onChange={(e) => setPaymentDetails(prev => ({ ...prev, cvv: e.target.value }))}
-                      className="w-full border-2 border-black p-3 focus:outline-none focus:ring-2 focus:ring-black/50"
-                      placeholder="123"
-                    />
-                  </div>
+                <div className="flex justify-between items-center border-b-2 border-black pb-3">
+                  <span className="font-bold uppercase text-gray-700">Total Amount</span>
+                  <span className="text-3xl font-bold">${totalAmount.toFixed(2)}</span>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-6 border-t-2 border-black">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="flex-1 border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 border-2 border-black bg-black text-white p-3 font-bold uppercase hover:bg-white hover:text-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Pay $${totalAmount.toFixed(2)}`
+              <div className="bg-gray-100 border-2 border-black p-4">
+                <p className="text-sm font-bold text-gray-700 text-center">
+                  By confirming this order, your items will be processed and your cart will be cleared.
+                </p>
+              </div>
+
+              {/* Tampilkan Error jika ada */}
+              {error && (
+                <div className="bg-red-50 border-2 border-red-300 p-3 text-red-700 text-sm font-bold text-center">
+                  {error}
+                </div>
               )}
-            </button>
-          </div>
-        </form>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onCancel}
+                  disabled={isProcessing}
+                  className="flex-1 border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={isProcessing}
+                  className={`flex-1 border-2 border-black p-3 font-bold uppercase transition-colors flex items-center justify-center ${
+                    isProcessing
+                      ? "bg-gray-500 text-white cursor-not-allowed opacity-75"
+                      : "bg-black text-white hover:bg-white hover:text-black"
+                  }`}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Confirm Order"
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Success State */}
+            <div className="border-b-4 border-black p-6 bg-green-600 text-white">
+              <div className="flex items-center gap-3">
+                <Check size={24} className="animate-scale-in" />
+                <h2 className="text-2xl font-bold">Order Confirmed!</h2>
+              </div>
+            </div>
+
+            <div className="p-8 text-center space-y-4 animate-slide-up">
+              <p className="text-lg font-bold">Your order has been successfully placed.</p>
+              <div className="bg-green-50 border-2 border-green-600 p-4">
+                <p className="text-sm text-green-700 font-bold">
+                  Redirecting you to confirmation...
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-green-600">${totalAmount.toFixed(2)}</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

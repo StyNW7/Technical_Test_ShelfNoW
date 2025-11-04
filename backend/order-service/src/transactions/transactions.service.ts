@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-// 1. Impor 'Prisma' (untuk tipe TransactionClient)
+// Impor 'Prisma' (untuk tipe TransactionClient)
 import { Transaction, TransactionStatus, Prisma } from '@prisma/client'; 
 
 @Injectable()
@@ -15,20 +15,17 @@ export class TransactionsService {
       paymentMethod: string;
       paymentDetails?: any;
     },
-    // 2. PERBAIKAN TIPE DI SINI:
-    // Gunakan tipe 'Prisma.TransactionClient' yang disediakan oleh Prisma
-    // untuk klien transaksi, bukan 'PrismaService'.
+    // PERBAIKAN TIPE: Gunakan Prisma.TransactionClient
     tx?: Prisma.TransactionClient 
   ): Promise<Transaction> {
     
-    // 3. 'client' sekarang memiliki tipe yang kompatibel
     const client = tx || this.prisma;
 
     return client.transaction.create({
       data: {
         orderId: createDto.orderId,
-        userId: createDto.userId,
-        amount: createDto.amount,
+        userId: createDto.userId, 
+        amount: createDto.amount, 
         paymentMethod: createDto.paymentMethod,
         paymentDetails: createDto.paymentDetails || undefined,
         status: TransactionStatus.PENDING, 
@@ -36,8 +33,6 @@ export class TransactionsService {
     });
   }
 
-  // ... sisa file Anda (findAll, findOne, dll.) tetap sama ...
-  
   async findAll(): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
       include: { order: true },

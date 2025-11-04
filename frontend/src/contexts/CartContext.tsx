@@ -122,20 +122,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   // ===== PERBAIKAN DI SINI (2) =====
-  const checkout = async (orderData: CreateOrderRequest): Promise<any> => {
+  const checkout = async (orderData: CreateOrderRequest) => {
     try {
-      setError(null);
-      // 1. Panggil API untuk membuat pesanan
-      const orderResponse = await apiService.createOrder(orderData);
+      // This will:
+      // 1. Create an order with all cart items
+      // 2. Create a transaction record 
+      // 3. Clear the cart
+      const result = await apiService.createOrder(orderData);
       
-      // 2. Refresh keranjang (yang sekarang seharusnya kosong)
+      // Refresh cart to get empty cart
       await refreshCart();
       
-      return orderResponse;
-    } catch (err: any) {
-      console.error('Error during checkout:', err);
-      setError(err.message || 'Checkout failed');
-      throw err;
+      return result;
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      throw error;
     }
   };
   // =============================

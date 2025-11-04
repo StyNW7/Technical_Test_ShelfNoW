@@ -1,4 +1,4 @@
-// app/cart/page.tsx
+// Lokasi: frontend/src/app/cart/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -8,22 +8,23 @@ import { useCart } from "@/contexts/CartContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { ShoppingCart, ArrowLeft, Package, Loader2, LogIn } from "lucide-react"
 import { useNavigate } from "react-router"
+// 1. Impor tipe CreateOrderRequest
 import { type CreateOrderRequest } from "@/services/api" 
 
 export default function CartPage() {
+  // 2. Ambil fungsi 'checkout' baru dari context
   const { cart, loading, checkout, refreshCart, items, totalPrice, totalItems } = useCart()
   const { isAuthenticated } = useAuth()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Refresh only if authenticated
+    // Refresh hanya jika terotentikasi
     if(isAuthenticated) {
       refreshCart()
       console.log("Cart: ", cart)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated]) // Tambahkan isAuthenticated sebagai dependensi
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -33,42 +34,37 @@ export default function CartPage() {
     setShowCheckoutModal(true)
   }
 
-  const handleConfirmCheckout = async (checkoutData: {
-    paymentMethod: string;
-    shippingAddress: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      country: string;
-    };
-    paymentDetails: {
-      bank?: string;
-      cardNumber?: string;
-      expiryDate?: string;
-      cvv?: string;
-    };
-  }) => {
+  // 3. Perbarui logika handleConfirmCheckout
+  const handleConfirmCheckout = async () => {
     try {
-      setCheckoutLoading(true)
-      
-      const orderData: CreateOrderRequest = {
-        paymentMethod: checkoutData.paymentMethod,
-        shippingAddress: checkoutData.shippingAddress,
-        paymentDetails: checkoutData.paymentDetails
+      // --- TODO: Ganti ini dengan data dari form ---
+      // Ini adalah data placeholder untuk memenuhi DTO backend
+      //
+      const placeholderOrderData: CreateOrderRequest = {
+        paymentMethod: "VIRTUAL_ACCOUNT",
+        shippingAddress: {
+          street: "Jl. Ujian Kesiapan",
+          city: "Jakarta",
+          state: "DKI Jakarta",
+          zipCode: "12345",
+          country: "Indonesia"
+        },
+        paymentDetails: {
+          bank: "BCA"
+        }
       };
+      // ----------------------------------------------
 
-      // Call checkout function from context
-      await checkout(orderData);
+      // Panggil fungsi checkout baru dari context
+      await checkout(placeholderOrderData);
       
       setShowCheckoutModal(false)
-      navigate('/order-confirmation')
+      navigate('/order-confirmation') // Arahkan ke halaman konfirmasi
     
     } catch (error) {
       console.error('Error during checkout:', error)
-      // You might want to show an error message to the user here
-    } finally {
-      setCheckoutLoading(false)
+      // Tampilkan error ke pengguna jika perlu
+      throw error; // Re-throw error agar ditangkap oleh modal
     }
   }
 
@@ -83,7 +79,7 @@ export default function CartPage() {
     )
   }
 
-  // Show login prompt if not authenticated
+  // Tampilkan prompt login jika tidak terotentikasi
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen bg-white flex flex-col">
@@ -125,8 +121,9 @@ export default function CartPage() {
   }
 
   const isEmpty = !cart || items.length === 0
+  // 4. Perbaikan kecil: Gunakan totalPrice dari context, yang sudah dihitung
   const taxAmount = totalPrice * 0.1
-  const finalTotal = totalPrice + taxAmount
+  const finalTotal = totalPrice * 1.1
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
@@ -219,7 +216,7 @@ export default function CartPage() {
 
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Items ({totalItems})</span>
+                  <span className="text-gray-700">Subtotal</span>
                   <span className="font-bold">${totalPrice.toFixed(2)}</span>
                 </div>
 
@@ -229,12 +226,12 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Tax (10%)</span>
+                  <span className="text-gray-700">Tax (estimated)</span>
                   <span className="font-bold">${taxAmount.toFixed(2)}</span>
                 </div>
 
                 <div className="border-t-2 border-black pt-4 flex justify-between">
-                  <span className="font-bold uppercase text-lg">Total</span>
+                  <span className="font-bold uppercase">Total</span>
                   <span className="text-2xl font-bold">${finalTotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -273,7 +270,6 @@ export default function CartPage() {
         totalItems={totalItems}
         onConfirm={handleConfirmCheckout}
         onCancel={() => setShowCheckoutModal(false)}
-        loading={checkoutLoading}
       />
     </main>
   )
