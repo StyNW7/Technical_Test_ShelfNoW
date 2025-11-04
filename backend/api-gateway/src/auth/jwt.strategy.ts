@@ -13,13 +13,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // Your JWT payload structure from auth service
     console.log('JWT Payload received:', payload);
     
-    // Handle different possible payload structures
     const userId = payload.sub || payload.userId;
     const email = payload.email;
-    const role = payload.role || payload.roles?.[0]; // Handle both 'role' and 'roles' array
+    const role = payload.role || payload.roles?.[0];
 
     if (!userId || !email) {
       console.error('Invalid token payload:', payload);
@@ -29,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return { 
       userId: userId.toString(), 
       email: email, 
-      role: role || 'user' // Default role if not provided
+      role: role || 'user'
     };
   }
 }

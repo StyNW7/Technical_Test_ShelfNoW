@@ -5,28 +5,28 @@ import { Star } from "lucide-react"
 export function TestimonialsSection() {
   const testimonials = [
     {
-      name: "Sarah Mitchell",
+      name: "NW25-1",
       role: "Book Lover",
       content: "ShelfNoW has completely transformed my reading habit. The curated selections are absolutely perfect.",
       rating: 5,
       image: "👩",
     },
     {
-      name: "James Chen",
+      name: "OW25-1",
       role: "Student",
       content: "Fast shipping, excellent quality books, and the customer service is outstanding. Highly recommended!",
       rating: 5,
       image: "👨",
     },
     {
-      name: "Emma Rodriguez",
+      name: "AA25-1",
       role: "Entrepreneur",
       content: "The best online bookstore I've found. Amazing selection and the prices are unbeatable.",
       rating: 5,
       image: "👩‍💼",
     },
     {
-      name: "Alex Thompson",
+      name: "CK25-1",
       role: "Teacher",
       content: "I use ShelfNoW for all my book purchases now. The website is intuitive and delivery is reliable.",
       rating: 5,

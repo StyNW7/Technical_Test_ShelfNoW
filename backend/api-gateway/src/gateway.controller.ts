@@ -1,12 +1,10 @@
-// Lokasi: api-gateway/src/gateway.controller.ts
-
 import { 
   Controller, Get, Post, Patch, Delete, Body, 
   Param, Query, Req, Res, UseGuards, Options, Inject,
   HttpException, HttpStatus,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
-import { JwtAuthGuard } from './auth/jwt-auth.guard'; // Pastikan ini benar, atau './auth/jwt-auth.guard'
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 
@@ -180,29 +178,23 @@ export class GatewayController {
   @Post('orders')
   @UseGuards(JwtAuthGuard)
   async createOrder(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
-    // DTO dari frontend berisi shippingAddress & paymentMethod
-    // Kita perlu menambahkan userId dari token
     const payload = { 
       ...body, 
       userId: req.user.userId 
     };
     
-    // ===== PERBAIKAN DI SINI =====
-    // Ganti 'order_create' menjadi 'order_create_from_cart' agar cocok
     return this.sendMicroserviceRequest(res, this.orderServiceClient, 'order_create_from_cart', payload);
   }
 
   @Get('orders')
   @UseGuards(JwtAuthGuard)
   async getUserOrders(@Req() req: AuthenticatedRequest, @Res() res: Response) {
-    // DTO backend mengharapkan userId
     return this.sendMicroserviceRequest(res, this.orderServiceClient, 'order_find_by_user', req.user.userId);
   }
 
   @Get('orders/:id')
   @UseGuards(JwtAuthGuard)
   async getOrder(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
-    // DTO backend hanya mengharapkan ID
     return this.sendMicroserviceRequest(res, this.orderServiceClient, 'order_find_one', id);
   }
 

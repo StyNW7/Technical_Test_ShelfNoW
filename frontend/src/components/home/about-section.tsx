@@ -16,7 +16,7 @@ export function AboutSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
             <p className="text-xl text-black/70 leading-relaxed">
-              Founded in 2020, ShelfNoW was born from a simple idea: make quality literature accessible to everyone. We
+              Founded in 2025, ShelfNoW was born from a simple idea: make quality literature accessible to everyone. We
               believe that every reader deserves a curated selection of books that inspire, educate, and entertain.
             </p>
             <p className="text-lg text-black/60 leading-relaxed">

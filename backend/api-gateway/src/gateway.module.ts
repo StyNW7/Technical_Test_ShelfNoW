@@ -9,20 +9,18 @@ import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports: [
     PassportModule,
-    // Pastikan JWT_SECRET Anda ada di file .env gateway
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
     
-    // Ini sudah benar: mendaftarkan semua microservice Anda
     ClientsModule.register([
       {
         name: 'AUTH_SERVICE',
         transport: Transport.TCP,
         options: {
-          host: 'auth-service', // Nama kontainer Docker
-          port: 3001,           // Port service
+          host: 'auth-service',
+          port: 3001,
         },
       },
       {
