@@ -1,26 +1,55 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+// Lokasi: backend/api-gateway/src/app.module.ts
+
+import { Module } from '@nestjs/common';
 import { GatewayController } from './gateway.controller';
-import { GatewayService } from './gateway.service';
-import { AuthModule } from './auth/auth.module';
-import { HealthModule } from './health/health.module';
-import { OrdersController } from './orders/orders.controller';
-import { CartController } from './cart/cart.controller';
-import { CheckoutController } from './checkout/checkout.controller';
-import { TransactionsController } from './transactions/transactions.controller';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { JwtStrategy } from './auth/jwt.strategy';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { HealthModule } from './health/health.module'; // HealthModule bisa tetap ada
 
 @Module({
-  imports: [AuthModule, HealthModule],
-  controllers: [
-    GatewayController,
-    OrdersController,
-    CartController,
-    CheckoutController,
-    TransactionsController
+  imports: [
+    HealthModule, // Modul untuk health check
+    PassportModule,
+    // Pastikan JWT_SECRET Anda ada di file .env gateway
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1d' },
+    }),
+    
+    // Mendaftarkan semua microservice TCP
+    ClientsModule.register([
+      {
+        name: 'AUTH_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: 'auth-service',
+          port: 3001,
+        },
+      },
+      {
+        name: 'PRODUCT_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: 'product-service',
+          port: 3002,
+        },
+      },
+      {
+        name: 'ORDER_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: 'order-service',
+          port: 3003,
+        },
+      },
+    ]),
   ],
-  providers: [GatewayService, Reflector],
+  // HANYA daftarkan GatewayController
+  controllers: [GatewayController],
+  // Hapus GatewayService, tambahkan provider untuk Auth
+  providers: [JwtAuthGuard, JwtStrategy], 
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-  }
-}
+export class AppModule {}
