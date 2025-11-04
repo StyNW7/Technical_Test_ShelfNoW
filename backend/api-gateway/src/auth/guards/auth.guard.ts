@@ -25,7 +25,14 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
 
+    console.log('AuthGuard: Checking token', { 
+      hasToken: !!token, 
+      endpoint: request.url,
+      method: request.method 
+    });
+
     if (!token) {
+      console.log('AuthGuard: No token provided');
       throw new UnauthorizedException('No token provided');
     }
 
@@ -34,6 +41,12 @@ export class AuthGuard implements CanActivate {
         .send<JwtPayload>('auth_verify_token', { token })
         .toPromise();
 
+      console.log('AuthGuard: Token validation result', { 
+        hasUser: !!user, 
+        userId: user?.userId,
+        role: user?.role 
+      });
+
       if (!user) {
         throw new UnauthorizedException('Invalid token');
       }
@@ -41,12 +54,20 @@ export class AuthGuard implements CanActivate {
       request.user = user;
       return true;
     } catch (error) {
+      console.error('AuthGuard: Token validation failed', error);
       throw new UnauthorizedException('Invalid token');
     }
   }
 
   private extractTokenFromHeader(request: any): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    const authHeader = request.headers.authorization;
+    console.log('AuthGuard: Authorization header', authHeader);
+    
+    if (!authHeader) {
+      return undefined;
+    }
+
+    const [type, token] = authHeader.split(' ');
     return type === 'Bearer' ? token : undefined;
   }
 }

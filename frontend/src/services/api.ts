@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 // Determine the API URL based on environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -77,14 +78,24 @@ export interface ProductsResponse {
 
 class ApiService {
   private getAuthToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    console.log('ApiService: Retrieved token from localStorage', { 
+      hasToken: !!token,
+      tokenLength: token?.length 
+    });
+    return token;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-
     const url = `${API_BASE_URL}${endpoint}`;
     const token = this.getAuthToken();
     
+    console.log('ApiService: Making request', { 
+      url, 
+      hasToken: !!token,
+      method: options.method || 'GET'
+    });
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -92,6 +103,9 @@ class ApiService {
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('ApiService: Added Authorization header');
+    } else {
+      console.warn('ApiService: No token available for request');
     }
 
     try {
@@ -101,16 +115,36 @@ class ApiService {
         ...options,
       });
 
-      // First, check if response is OK
+      console.log('ApiService: Response received', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
+
+      // Handle unauthorized responses
+      if (response.status === 401) {
+        console.error('ApiService: Unauthorized - clearing auth data');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.dispatchEvent(new Event('storage'));
+        throw new Error('Authentication required. Please login again.');
+      }
+
+      // Handle forbidden responses
+      if (response.status === 403) {
+        const errorText = await response.text();
+        console.error('ApiService: Forbidden access', { errorText });
+        throw new Error('Insufficient permissions to access this resource.');
+      }
+
       if (!response.ok) {
-        // Try to parse error as JSON, but fallback to text
         let errorMessage = `HTTP error! status: ${response.status}`;
         
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
+          console.error('ApiService: Error response JSON', errorData);
         } catch {
-          // If JSON parsing fails, try to get text
           try {
             const errorText = await response.text();
             if (errorText) {
@@ -126,17 +160,21 @@ class ApiService {
 
       // If response is OK, try to parse as JSON
       try {
-        const data = await response.json();
-        return data;
-      } catch (jsonError) {
-        // If response is OK but not JSON, return empty object for endpoints that don't return data
+        // For 204 No Content responses
         if (response.status === 204 || response.headers.get('content-length') === '0') {
           return {} as T;
         }
-        throw new Error('Server returned non-JSON response');
+        
+        const data = await response.json();
+        console.log('ApiService: Request successful', { data: data ? 'data received' : 'no data' });
+        return data;
+      } catch (jsonError) {
+        console.error('ApiService: JSON parsing error', jsonError);
+        throw new Error('Server returned invalid JSON response');
       }
       
     } catch (error: any) {
+      console.error('ApiService: Request failed', error);
       if (error.message.includes('CORS') || error.message.includes('Network')) {
         throw new Error('Cannot connect to server. Please check if the API Gateway is running.');
       }
@@ -146,6 +184,7 @@ class ApiService {
 
   // ===== AUTH ENDPOINTS =====
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    console.log('ApiService: Attempting login', { email: credentials.email });
     const response = await this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
@@ -153,29 +192,35 @@ class ApiService {
 
     // Ensure response has the expected structure
     if (!response.user || !response.access_token) {
+      console.error('ApiService: Invalid login response', response);
       throw new Error('Invalid response from server');
     }
 
     // Ensure user has role
     if (!response.user.role) {
       response.user.role = 'USER';
+      console.log('ApiService: Default role assigned to user');
     }
 
+    console.log('ApiService: Login successful', { 
+      userId: response.user.id, 
+      role: response.user.role 
+    });
     return response;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
+    console.log('ApiService: Attempting registration', { email: userData.email });
     const response = await this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
 
-    // Ensure response has the expected structure
     if (!response.user || !response.access_token) {
+      console.error('ApiService: Invalid registration response', response);
       throw new Error('Invalid response from server');
     }
 
-    // Ensure user has role
     if (!response.user.role) {
       response.user.role = 'USER';
     }
@@ -189,14 +234,15 @@ class ApiService {
 
   async validateToken(): Promise<{ valid: boolean; user?: any; error?: string }> {
     try {
+      console.log('ApiService: Validating token');
       const response = await this.request<{ valid: boolean; user?: any; error?: string }>('/auth/validate', {
         method: 'POST',
       });
 
+      console.log('ApiService: Token validation result', response);
       return response;
     } catch (error: any) {
-      console.error('Token validation request failed:', error);
-      // If validation fails, return invalid
+      console.error('ApiService: Token validation request failed:', error);
       return { valid: false, error: error.message };
     }
   }
@@ -215,6 +261,7 @@ class ApiService {
       ...(search && { search }),
     });
 
+    console.log('ApiService: Fetching products', { page, limit, category, search });
     return this.request<ProductsResponse>(`/products?${params}`);
   }
 
@@ -227,55 +274,8 @@ class ApiService {
   }
 
   // ===== ADMIN PRODUCT ENDPOINTS =====
-  // async createProduct(productData: CreateProductRequest): Promise<Product> {
-  //   return this.request<Product>('/products', {
-  //     method: 'POST',
-  //     body: JSON.stringify(productData),
-  //   });
-  // }
-
-  // async updateProduct(id: string, productData: UpdateProductRequest): Promise<Product> {
-  //   return this.request<Product>(`/products/${id}`, {
-  //     method: 'PATCH',
-  //     body: JSON.stringify(productData),
-  //   });
-  // }
-
-  // async deleteProduct(id: string): Promise<void> {
-  //   await this.request(`/products/${id}`, {
-  //     method: 'DELETE',
-  //   });
-  // }
-
-  // async updateStock(id: string, quantity: number): Promise<Product> {
-  //   return this.request<Product>(`/products/${id}/stock`, {
-  //     method: 'PATCH',
-  //     body: JSON.stringify({ quantity }),
-  //   });
-  // }
-
-  // async getAllProductsAdmin(
-  //   page: number = 1,
-  //   limit: number = 100,
-  //   category?: string,
-  //   search?: string
-  // ): Promise<ProductsResponse> {
-  //   const params = new URLSearchParams({
-  //     page: page.toString(),
-  //     limit: limit.toString(),
-  //     ...(category && { category }),
-  //     ...(search && { search }),
-  //   });
-
-  //   return this.request<ProductsResponse>(`/products/admin/all?${params}`);
-  // }
-
-  // async getProductAdmin(id: string): Promise<Product> {
-  //   return this.request<Product>(`/products/admin/${id}`);
-  // }
-
-
   async createProduct(productData: CreateProductRequest): Promise<Product> {
+    console.log('ApiService: Creating product', productData);
     return this.request<Product>('/products', {
       method: 'POST',
       body: JSON.stringify(productData),
@@ -322,7 +322,6 @@ class ApiService {
     return this.request<Product>(`/products/admin/${id}`);
   }
 
-
   // ===== ORDER ENDPOINTS =====
   async createOrder(orderData: any): Promise<any> {
     return this.request<any>('/orders', {
@@ -332,7 +331,7 @@ class ApiService {
   }
 
   async getUserOrders(): Promise<any[]> {
-    return this.request<any[]>('/orders');
+    return this.request<any[]>('/orders/my-orders');
   }
 
   async getOrder(id: string): Promise<any> {

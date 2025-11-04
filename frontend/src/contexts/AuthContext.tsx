@@ -66,27 +66,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('user', JSON.stringify(userData));
         } else {
           console.log('AuthProvider: Token invalid, response:', response);
-          // Use saved user as fallback if validation fails but we have a token
-          try {
-            const parsedUser = JSON.parse(savedUser);
-            if (parsedUser && parsedUser.id) {
-              const userData = {
-                ...parsedUser,
-                role: parsedUser.role || 'USER'
-              };
-              setUser(userData);
-              console.log('AuthProvider: Using saved user as fallback');
-            } else {
-              logout();
-            }
-          } catch (parseError) {
-            console.error('AuthProvider: Failed to parse saved user:', parseError);
-            logout();
-          }
+          // If token is invalid, clear everything
+          logout();
         }
       } catch (error) {
         console.error('AuthProvider: Token validation failed:', error);
-        // Use saved user as fallback
+        // On network errors, use saved user as fallback
         try {
           const parsedUser = JSON.parse(savedUser);
           if (parsedUser && parsedUser.id) {
@@ -95,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               role: parsedUser.role || 'USER'
             };
             setUser(userData);
-            console.log('AuthProvider: Using saved user after validation error');
+            console.log('AuthProvider: Using saved user after network error');
           } else {
             logout();
           }
@@ -113,6 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
+      console.log('AuthProvider: Attempting login for:', email);
       const response: AuthResponse = await apiService.login({ email, password });
       
       // Ensure user data has role
@@ -121,10 +107,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role: response.user.role || 'USER'
       };
       
+      console.log('AuthProvider: Login successful, storing data', userData);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } catch (error: any) {
+      console.error('AuthProvider: Login failed:', error);
       throw new Error(error.message || 'Login failed');
     }
   };
@@ -143,11 +131,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } catch (error: any) {
+      console.error('AuthProvider: Registration failed:', error);
       throw new Error(error.message || 'Registration failed');
     }
   };
 
   const logout = () => {
+    console.log('AuthProvider: Logging out');
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     setUser(null);
@@ -155,10 +145,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Safe role checking
   const isAdmin = user?.role === 'ADMIN';
+  const isAuthenticated = !!user;
+
+  console.log('AuthProvider: Current auth state', { 
+    user: user?.email, 
+    isAuthenticated, 
+    isAdmin, 
+    loading 
+  });
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isAdmin,
     login,
     register,

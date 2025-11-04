@@ -30,6 +30,8 @@ export default function AdminDashboard() {
   
   const { user, isAdmin, logout } = useAuth();
 
+  console.log('AdminDashboard: Current user:', user);
+
   // Fetch books from API
   const fetchBooks = async () => {
     try {

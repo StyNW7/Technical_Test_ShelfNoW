@@ -54,7 +54,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend  # Frontend root directory
+      context: ./frontend
       target: development
     container_name: shelfnow_frontend
     ports:
@@ -74,7 +74,7 @@ services:
       target: development
     container_name: shelfnow_gateway
     ports:
-      - "3000:3000"  # Gateway is now the main entry point
+      - "3000:3000"  # Gateway is the main entry point
     env_file:
       - ./backend/api-gateway/.env
     depends_on:
