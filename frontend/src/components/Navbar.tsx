@@ -31,7 +31,7 @@ export function Navbar() {
   const userNavItems = [
     { label: "Home", href: "/", icon: Home },
     { label: "Shop", href: "/shop", icon: Store },
-    { label: "Transaction History", href: "/transactions", icon: History },
+    { label: "Transaction History", href: "/transaction", icon: History },
   ];
 
   const adminNavItems = [
