@@ -113,6 +113,41 @@ export class GatewayController {
     return this.sendMicroserviceRequest(res, this.authServiceClient, 'auth_validate_token', { token });
   }
 
+  // ===== ADMIN USER MANAGEMENT ROUTES =====
+
+  @Get('users')
+  @UseGuards(JwtAuthGuard) // Menggunakan Guard dari Gateway
+  async adminGetAllUsers(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    // Kita juga bisa menambahkan pengecekan role di sini jika perlu
+    // if (req.user.role.toLowerCase() !== 'admin') {
+    //   return res.status(HttpStatus.FORBIDDEN).json({ message: 'Forbidden' });
+    // }
+    
+    // Payload hanya berisi data user yang terotentikasi
+    const payload = { user: req.user };
+    return this.sendMicroserviceRequest(res, this.authServiceClient, 'admin_get_all_users', payload);
+  }
+
+  @Get('users/:id')
+  @UseGuards(JwtAuthGuard)
+  async adminGetUserById(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const payload = { 
+      user: req.user,
+      id: id // Mengirim ID dari parameter
+    };
+    return this.sendMicroserviceRequest(res, this.authServiceClient, 'admin_get_user_by_id', payload);
+  }
+
+  @Delete('users/:id')
+  @UseGuards(JwtAuthGuard)
+  async adminDeleteUser(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const payload = { 
+      user: req.user,
+      id: id // Mengirim ID dari parameter
+    };
+    return this.sendMicroserviceRequest(res, this.authServiceClient, 'admin_delete_user', payload);
+  }
+
   // ===== PRODUCT ROUTES =====
   // CATATAN: 'products_get_all' adalah tebakan. Sesuaikan dengan @MessagePattern di product-service Anda
   @Get('products')
@@ -151,7 +186,29 @@ export class GatewayController {
     return this.sendMicroserviceRequest(res, this.productServiceClient, 'products_delete', payload);
   }
 
-  // ... (Tambahkan rute admin produk lainnya di sini dengan pola yang sama) ...
+  @Get('products/admin/all') // Rute HTTP
+  @UseGuards(JwtAuthGuard)
+  async getAllProductsAdmin(
+    @Query() query: any, 
+    @Req() req: AuthenticatedRequest, 
+    @Res() res: Response
+  ) {
+    const payload = { query, user: req.user };
+    // PERBAIKI INI: Panggil 'products_get_admin_all', bukan 'products_get_all'
+    return this.sendMicroserviceRequest(res, this.productServiceClient, 'products_get_admin_all', payload);
+  }
+
+  @Get('products/admin/:id') // Rute HTTP
+  @UseGuards(JwtAuthGuard)
+  async getProductAdmin(
+    @Param('id') id: string, 
+    @Req() req: AuthenticatedRequest, 
+    @Res() res: Response
+  ) {
+    const payload = { id, user: req.user };
+    // PERBAIKI INI: Panggil 'products_get_admin_one', bukan 'products_get_one'
+    return this.sendMicroserviceRequest(res, this.productServiceClient, 'products_get_admin_one', payload);
+  }
 
   // ===== ORDER ROUTES (Selain Cart) =====
   // CATATAN: 'order_create' adalah tebakan.

@@ -1,30 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Buat Microservice, bukan aplikasi HTTP
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: Transport.TCP,
+      options: {
+        host: '0.0.0.0',
+        port: 3002,
+      },
+    },
+  );
   
+  // Kita masih bisa menggunakan Global Pipes
   app.useGlobalPipes(new ValidationPipe());
-  app.enableCors();
   
-  // Add health check endpoint
-  app.getHttpAdapter().get('/health', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
-      service: 'product-service',
-      timestamp: new Date().toISOString()
-    });
-  });
-
-  await app.listen(3002);
-  console.log('Product service is running on port 3002');
+  // Jalankan microservice
+  await app.listen();
+  console.log('Product microservice is listening on port 3002');
 }
 
-// Add retry logic for database connection
+// Logika retry Anda sudah bagus dan bisa tetap digunakan
 async function startApplication() {
   const maxRetries = 5;
-  const retryDelay = 5000; // 5 seconds
+  const retryDelay = 5000; // 5 detik
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {

@@ -1,20 +1,21 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+// Ganti PrismaClient dengan PrismaService (asumsi dari PrismaModule Anda)
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductsService {
-  private prisma = new PrismaClient();
+  // Inject PrismaService, jangan buat instance baru
+  constructor(private prisma: PrismaService) {}
 
   async create(createProductDto: CreateProductDto) {
     try {
-      // Validate required fields
+      // ... (sisa logika Anda SAMA PERSIS, tidak perlu diubah) ...
       if (!createProductDto.title || !createProductDto.author || !createProductDto.description) {
         throw new BadRequestException('Title, author, and description are required');
       }
 
-      // Check if ISBN already exists (if provided)
       if (createProductDto.isbn) {
         const existingProduct = await this.prisma.product.findFirst({
           where: {
@@ -26,10 +27,11 @@ export class ProductsService {
           throw new ConflictException('A product with this ISBN already exists');
         }
       }
-
+      
       const product = await this.prisma.product.create({
         data: {
           ...createProductDto,
+          // Pastikan DTO Anda memiliki properti ini
           isActive: createProductDto.isActive !== undefined ? createProductDto.isActive : true,
         },
       });
@@ -43,6 +45,8 @@ export class ProductsService {
     }
   }
 
+  // ... (findAll, findOne, update, remove, dll. SAMA PERSIS) ...
+  // ... Tidak perlu mengubah logika bisnis Anda ...
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -54,7 +58,6 @@ export class ProductsService {
     
     const where: any = {};
 
-    // Only show active products by default
     if (!includeInactive) {
       where.isActive = true;
     }
@@ -106,7 +109,6 @@ export class ProductsService {
 
   async update(id: string, updateProductDto: UpdateProductDto) {
     try {
-      // Check if product exists
       const existingProduct = await this.prisma.product.findUnique({
         where: { id },
       });
@@ -115,7 +117,6 @@ export class ProductsService {
         throw new NotFoundException(`Product with ID ${id} not found`);
       }
 
-      // Check if ISBN already exists for other products (if provided)
       if (updateProductDto.isbn) {
         const productWithSameIsbn = await this.prisma.product.findFirst({
           where: {
@@ -146,7 +147,6 @@ export class ProductsService {
 
   async remove(id: string) {
     try {
-      // Check if product exists
       const existingProduct = await this.prisma.product.findUnique({
         where: { id },
       });
@@ -154,8 +154,7 @@ export class ProductsService {
       if (!existingProduct) {
         throw new NotFoundException(`Product with ID ${id} not found`);
       }
-
-      // Soft delete by setting isActive to false
+      
       return await this.prisma.product.update({
         where: { id },
         data: { isActive: false },
@@ -170,7 +169,6 @@ export class ProductsService {
 
   async permanentRemove(id: string) {
     try {
-      // Permanent delete from database
       return await this.prisma.product.delete({
         where: { id },
       });
@@ -184,7 +182,6 @@ export class ProductsService {
 
   async restore(id: string) {
     try {
-      // Restore soft-deleted product
       return await this.prisma.product.update({
         where: { id },
         data: { isActive: true },
@@ -234,7 +231,6 @@ export class ProductsService {
     }
   }
 
-  // Get all products including inactive (for admin)
   async findAllAdmin(
     page: number = 1,
     limit: number = 10,

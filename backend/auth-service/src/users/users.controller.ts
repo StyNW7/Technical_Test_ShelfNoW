@@ -1,49 +1,77 @@
-import { Controller, Get, Param, Delete, UseGuards, Put, Body, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, ParseUUIDPipe } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorators';
 import { UserRole } from '../common/enums/user-role-enum';
 
-@ApiTags('users')
-@Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
+// Interface untuk payload yang dikirim dari gateway
+interface AuthenticatedPayload {
+  user: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+  // Properti lain bisa ditambahkan di sini
+  id?: string; // Untuk findOne, update, delete
+  updateData?: Partial<User>; // Untuk update
+}
+
+@Controller() // Hapus ('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Return all users', type: [User] })
-  async findAll(): Promise<User[]> {
+  // Helper untuk memeriksa role admin dari payload
+  private checkAdmin(payload: AuthenticatedPayload): void {
+    if (!payload.user || payload.user.role?.toLowerCase() !== 'admin') {
+      throw new Error('Forbidden: Admin access required');
+    }
+  }
+
+  /**
+   * Menggantikan @Get()
+   * @Roles(UserRole.ADMIN)
+   */
+  @MessagePattern('admin_get_all_users')
+  async findAll(@Payload() payload: AuthenticatedPayload): Promise<User[]> {
+    this.checkAdmin(payload); // Keamanan lapisan kedua
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'Return user', type: User })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
-    return this.usersService.findById(id);
+  /**
+   * Menggantikan @Get(':id')
+   */
+  @MessagePattern('admin_get_user_by_id')
+  async findOne(@Payload() payload: AuthenticatedPayload): Promise<User> {
+    this.checkAdmin(payload);
+    // Asumsi gateway mengirim 'id' di dalam payload
+    if (!payload.id) {
+      throw new Error('User ID is required');
+    }
+    return this.usersService.findById(payload.id);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Update user' })
-  @ApiResponse({ status: 200, description: 'User updated', type: User })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string, 
-    @Body() updateData: Partial<User>
-  ): Promise<User> {
-    return this.usersService.updateUser(id, updateData);
+  /**
+   * Menggantikan @Put(':id')
+   */
+  @MessagePattern('admin_update_user')
+  async update(@Payload() payload: AuthenticatedPayload): Promise<User> {
+    this.checkAdmin(payload);
+    if (!payload.id || !payload.updateData) {
+      throw new Error('User ID and updateData are required');
+    }
+    return this.usersService.updateUser(payload.id, payload.updateData);
   }
 
-  @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete user (Admin only)' })
-  @ApiResponse({ status: 200, description: 'User deleted' })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.usersService.deleteUser(id);
+  /**
+   * Menggantikan @Delete(':id')
+   * @Roles(UserRole.ADMIN)
+   */
+  @MessagePattern('admin_delete_user')
+  async remove(@Payload() payload: AuthenticatedPayload): Promise<void> {
+    this.checkAdmin(payload);
+    if (!payload.id) {
+      throw new Error('User ID is required');
+    }
+    return this.usersService.deleteUser(payload.id);
   }
 }
