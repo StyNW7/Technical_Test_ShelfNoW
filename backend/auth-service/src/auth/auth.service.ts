@@ -1,10 +1,7 @@
-// Lokasi: auth-service/src/auth/auth.service.ts
-
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import * as bcrypt from 'bcryptjs'; // Pastikan Anda menggunakan bcryptjs atau bcrypt
-// 1. Impor UsersService dan User entity
+import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
 
@@ -23,13 +20,11 @@ export class AuthService {
     });
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      // Kembalikan sebagai User entity untuk menyembunyikan password
       return new User(user);
     }
     return null;
   }
 
-  // Fungsi login Anda sudah benar dan mengembalikan data lengkap
   async login(loginDto: { email: string; password: string }) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
@@ -44,12 +39,10 @@ export class AuthService {
     
     return {
       access_token: this.jwtService.sign(payload),
-      // User entity sudah menyembunyikan password
       user: user, 
     };
   }
 
-  // Fungsi register Anda sudah benar dan mengembalikan data lengkap
   async register(registerDto: { firstName: string; lastName: string; email: string; password: string }) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: registerDto.email },
@@ -79,12 +72,11 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: new User(user), // Kembalikan sebagai User entity
+      user: new User(user),
     };
   }
 
-  // 3. ===== PERBAIKAN UTAMA DI SINI =====
-  async validateToken(token: string): Promise<User> { // Ubah return type
+  async validateToken(token: string): Promise<User> {
     let payload: any;
     try {
       // Verifikasi token
@@ -97,17 +89,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    // Ambil userId (sub) dari payload
     const userId = payload.sub;
     
-    // Gunakan UsersService untuk mengambil data user lengkap dari DB
     const user = await this.usersService.findById(userId); 
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
     
-    // Kembalikan objek User lengkap (entity User sudah @Exclude password)
     return user;
   }
 }
