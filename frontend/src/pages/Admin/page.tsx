@@ -252,13 +252,6 @@ export default function AdminDashboard() {
               <Package className="w-5 h-5" />
               Overview
             </a>
-            <a
-              href="#"
-              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
-            >
-              <BookOpen className="w-5 h-5" />
-              Shop
-            </a>
           </nav>
         </aside>
 

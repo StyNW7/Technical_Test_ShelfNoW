@@ -6,6 +6,29 @@
 // Determine the API URL based on environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Tipe Enum dari Prisma
+export const OrderStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PROCESSING: 'PROCESSING',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+} as const;
+
+export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
+
+export const TransactionStatus = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export type TransactionStatus = typeof TransactionStatus[keyof typeof TransactionStatus];
+
 // Auth interfaces
 export interface LoginRequest {
   email: string;
@@ -75,6 +98,37 @@ export interface ProductsResponse {
     total: number;
     pages: number;
   };
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  // Ini adalah data snapshot yang kita bahas sebelumnya
+  // Jika Anda tidak menyimpannya di DB, backend harus mengembalikannya
+  title?: string;  // Asumsi title disimpan
+  author?: string; // (Tidak ada di skema Anda, tapi dibutuhkan UI)
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  amount: number;
+  status: TransactionStatus;
+  paymentMethod: string;
+  paymentDetails?: any;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  totalAmount: number;
+  status: OrderStatus;
+  createdAt: string;
+  orderItems: OrderItem[];
+  transaction: Transaction | null; // Transaksi bisa jadi null
 }
 
 export interface CartItem {
@@ -427,12 +481,15 @@ class ApiService {
     });
   }
 
-  async getUserOrders(): Promise<any[]> {
-    return this.request<any[]>('/orders/my-orders');
+  async getUserOrders(): Promise<Order[]> {
+    // Endpoint ini memanggil 'order_find_by_user' di gateway
+    return this.request<Order[]>('/orders');
   }
 
-  async getOrder(id: string): Promise<any> {
-    return this.request<any>(`/orders/${id}`);
+  // Menggunakan tipe data Order dan endpoint /orders/:id yang benar
+  async getOrder(id: string): Promise<Order> {
+    // Endpoint ini memanggil 'order_find_one' di gateway
+    return this.request<Order>(`/orders/${id}`);
   }
 
   // ===== CART ENDPOINTS =====

@@ -59,7 +59,7 @@ export default function CartPage() {
       await checkout(placeholderOrderData);
       
       setShowCheckoutModal(false)
-      navigate('/order-confirmation') // Arahkan ke halaman konfirmasi
+      navigate('/transaction') // Arahkan ke halaman konfirmasi
     
     } catch (error) {
       console.error('Error during checkout:', error)
