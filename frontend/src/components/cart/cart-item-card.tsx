@@ -1,23 +1,39 @@
 "use client"
 
 import { Trash2, Plus, Minus } from "lucide-react"
-import { useCart } from "@/lib/cart-context"
-import type { CartItem } from "@/lib/mock-cart"
+import { useCart } from "@/contexts/CartContext"
 
 interface CartItemCardProps {
-  item: CartItem
+  item: {
+    id: string;
+    productId: string;
+    bookTitle: string;
+    bookAuthor: string;
+    bookImage?: string;
+    price: number;
+    quantity: number;
+    stock: number;
+  }
 }
 
 export function CartItemCard({ item }: CartItemCardProps) {
-  const { removeItem, updateQuantity } = useCart()
+  const { removeFromCart, updateCartItem } = useCart()
 
-  const handleRemove = () => {
-    removeItem(item.bookId)
+  const handleRemove = async () => {
+    try {
+      await removeFromCart(item.id)
+    } catch (error) {
+      console.error('Error removing item:', error)
+    }
   }
 
-  const handleQuantityChange = (newQuantity: number) => {
+  const handleQuantityChange = async (newQuantity: number) => {
     if (newQuantity > 0 && newQuantity <= item.stock) {
-      updateQuantity(item.bookId, newQuantity)
+      try {
+        await updateCartItem(item.id, newQuantity)
+      } catch (error) {
+        console.error('Error updating quantity:', error)
+      }
     }
   }
 
@@ -28,9 +44,13 @@ export function CartItemCard({ item }: CartItemCardProps) {
         <div className="md:col-span-1">
           <div className="border-2 border-black overflow-hidden bg-gray-50 aspect-[3/4]">
             <img
-              src={item.bookImage || "/placeholder.svg"}
+              src={item.bookImage || "/placeholder-book.jpg"}
               alt={item.bookTitle}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/placeholder-book.jpg";
+              }}
             />
           </div>
         </div>
@@ -72,7 +92,9 @@ export function CartItemCard({ item }: CartItemCardProps) {
               type="number"
               value={item.quantity}
               onChange={(e) => handleQuantityChange(Number(e.target.value))}
-              className="flex-1 text-center border-l border-r border-black font-bold focus:outline-none"
+              min="1"
+              max={item.stock}
+              className="flex-1 text-center border-l border-r border-black font-bold focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <button
               onClick={() => handleQuantityChange(item.quantity + 1)}

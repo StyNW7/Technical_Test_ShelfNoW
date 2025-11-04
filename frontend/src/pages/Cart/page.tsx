@@ -1,27 +1,96 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CartItemCard } from "@/components/cart/cart-item-card"
 import { CheckoutModal } from "@/components/cart/checkout-modal"
-import { useCart } from "@/lib/cart-context"
-import { ShoppingCart, ArrowLeft, Package } from "lucide-react"
+import { useCart } from "@/contexts/CartContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { ShoppingCart, ArrowLeft, Package, Loader2, LogIn } from "lucide-react"
+import { useNavigate } from "react-router"
 
 export default function CartPage() {
-  const { state, clearCart } = useCart()
+  const { cart, loading, clearCart, refreshCart, items, totalPrice, totalItems } = useCart()
+  const { isAuthenticated } = useAuth()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    refreshCart()
+  }, [])
 
   const handleCheckout = () => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/cart')
+      return
+    }
     setShowCheckoutModal(true)
   }
 
-  const handleConfirmCheckout = () => {
-    setShowCheckoutModal(false)
-    clearCart()
+  const handleConfirmCheckout = async () => {
+    try {
+      await clearCart()
+      setShowCheckoutModal(false)
+      navigate('/order-confirmation')
+    } catch (error) {
+      console.error('Error during checkout:', error)
+    }
   }
 
-  const isEmpty = state.items.length === 0
-  const taxAmount = state.totalPrice * 0.1
-  const finalTotal = state.totalPrice * 1.1
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-black mx-auto mb-4" />
+          <p className="text-lg">Loading cart...</p>
+        </div>
+      </main>
+    )
+  }
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-white flex flex-col">
+        <section className="border-b-2 border-black py-8 md:py-12">
+          <div className="max-w-7xl mx-auto px-4 md:px-6">
+            <div className="flex items-center gap-3 mb-4">
+              <ShoppingCart size={32} />
+              <h1 className="text-4xl md:text-5xl font-bold">Shopping Cart</h1>
+            </div>
+            <p className="text-gray-700">Please login to view your cart</p>
+          </div>
+        </section>
+
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-8">
+            <LogIn size={64} className="mx-auto text-gray-400 mb-6" />
+            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">
+              You need to be logged in to view your shopping cart and add items.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate('/login?redirect=/cart')}
+                className="w-full border-2 border-black bg-black text-white p-4 font-bold uppercase hover:bg-white hover:text-black transition-colors"
+              >
+                Login to Continue
+              </button>
+              <button
+                onClick={() => navigate('/shop')}
+                className="w-full border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  const isEmpty = !cart || items.length === 0
+  const taxAmount = totalPrice * 0.1
+  const finalTotal = totalPrice * 1.1
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
@@ -35,7 +104,7 @@ export default function CartPage() {
           <p className="text-gray-700">
             {isEmpty
               ? "Your cart is empty"
-              : `You have ${state.totalItems} item${state.totalItems !== 1 ? "s" : ""} in your cart`}
+              : `You have ${totalItems} item${totalItems !== 1 ? "s" : ""} in your cart`}
           </p>
         </div>
       </section>
@@ -49,12 +118,13 @@ export default function CartPage() {
               <Package size={64} className="mx-auto text-gray-400 mb-4" />
               <h2 className="text-3xl font-bold mb-3">Your cart is empty</h2>
               <p className="text-gray-600 mb-8 text-lg">Explore our collection of books and add some to your cart.</p>
-              <a href="/shop">
-                <button className="border-2 border-black px-8 py-3 font-bold uppercase hover:bg-black hover:text-white transition-colors">
-                  <ArrowLeft size={18} className="inline mr-2" />
-                  Continue Shopping
-                </button>
-              </a>
+              <button 
+                onClick={() => navigate('/shop')}
+                className="border-2 border-black px-8 py-3 font-bold uppercase hover:bg-black hover:text-white transition-colors"
+              >
+                <ArrowLeft size={18} className="inline mr-2" />
+                Continue Shopping
+              </button>
             </div>
 
             {/* Empty Summary */}
@@ -74,6 +144,10 @@ export default function CartPage() {
                   <span className="text-gray-700">Shipping</span>
                   <span className="font-bold">Free</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Tax (estimated)</span>
+                  <span className="font-bold">$0.00</span>
+                </div>
                 <div className="flex justify-between border-t-2 border-black pt-3">
                   <span className="font-bold uppercase">Total</span>
                   <span className="text-2xl font-bold">$0.00</span>
@@ -91,8 +165,8 @@ export default function CartPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
             {/* Cart Items */}
             <div className="md:col-span-2 space-y-6">
-              {state.items.map((item, index) => (
-                <div key={item.bookId} style={{ animationDelay: `${index * 0.1}s` }}>
+              {items.map((item, index) => (
+                <div key={item.id} style={{ animationDelay: `${index * 0.1}s` }}>
                   <CartItemCard item={item} />
                 </div>
               ))}
@@ -110,7 +184,7 @@ export default function CartPage() {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Subtotal</span>
-                  <span className="font-bold">${state.totalPrice.toFixed(2)}</span>
+                  <span className="font-bold">${totalPrice.toFixed(2)}</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -138,11 +212,12 @@ export default function CartPage() {
               </button>
 
               {/* Continue Shopping */}
-              <a href="/shop">
-                <button className="w-full border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors">
-                  Continue Shopping
-                </button>
-              </a>
+              <button 
+                onClick={() => navigate('/shop')}
+                className="w-full border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors"
+              >
+                Continue Shopping
+              </button>
 
               {/* Info Box */}
               <div className="mt-6 border-2 border-black p-4 bg-gray-50">
@@ -159,11 +234,10 @@ export default function CartPage() {
       <CheckoutModal
         isOpen={showCheckoutModal}
         totalAmount={finalTotal}
-        totalItems={state.totalItems}
+        totalItems={totalItems}
         onConfirm={handleConfirmCheckout}
         onCancel={() => setShowCheckoutModal(false)}
       />
-
     </main>
   )
 }

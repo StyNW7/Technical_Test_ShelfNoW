@@ -1,15 +1,18 @@
+// /backend/api-gateway/src/gateway.controller.ts
+
 import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res, UseGuards, Options, Headers } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { GatewayService } from './gateway.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { RolesGuard } from './auth/roles.guard';
-import { Roles } from './auth/roles.decorators';
+// Hapus RolesGuard dari gateway, biarkan service di belakang yang menanganinya
+// import { RolesGuard } from './auth/roles.guard';
+// import { Roles } from './auth/roles.decorators';
 
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
     email: string;
-    role: string;
+    role: string; 
   };
 }
 
@@ -47,7 +50,9 @@ export class GatewayController {
   @Get('auth/profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    // Header konsisten untuk SEMUA rute terotentikasi
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -57,15 +62,14 @@ export class GatewayController {
 
   @Post('auth/validate')
   async validateToken(@Req() req: Request, @Res() res: Response) {
-    // Forward the Authorization header directly to auth-service
     const headers = {
       'authorization': req.headers.authorization
     };
-    return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/validate', 'POST', null, headers);
+    // PERBAIKAN: Kirim {} (objek kosong) untuk menghindari 'unexpected token n'
+    return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/validate', 'POST', {}, headers);
   }
 
   // ===== PRODUCT ROUTES =====
-  // Public routes - no auth required
   @Get('products')
   async getProducts(
     @Query('page') page: number,
@@ -96,12 +100,12 @@ export class GatewayController {
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}`, 'GET');
   }
 
-  // Admin only routes
+  // Admin routes - Hapus RolesGuard, biarkan service di belakang
   @Post('products')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) 
   async createProduct(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -110,10 +114,10 @@ export class GatewayController {
   }
 
   @Patch('products/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
   async updateProduct(@Param('id') id: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -122,10 +126,10 @@ export class GatewayController {
   }
 
   @Delete('products/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
   async deleteProduct(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -134,10 +138,10 @@ export class GatewayController {
   }
 
   @Patch('products/:id/stock')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
   async updateStock(@Param('id') id: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -145,10 +149,8 @@ export class GatewayController {
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}/stock`, 'PATCH', body, headers);
   }
 
-  // Admin-only product listing (including inactive products)
   @Get('products/admin/all')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
   async getAllProductsAdmin(
     @Query('page') page: number,
     @Query('limit') limit: number,
@@ -167,6 +169,7 @@ export class GatewayController {
     const path = queryString ? `products/admin/all?${queryString}` : 'products/admin/all';
     
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -176,10 +179,10 @@ export class GatewayController {
   }
 
   @Get('products/admin/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
   async getProductAdmin(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -193,9 +196,10 @@ export class GatewayController {
   async createOrder(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const orderData = {
       ...body,
-      userId: req.user.userId
+      userId: req.user.userId 
     };
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -208,6 +212,7 @@ export class GatewayController {
   async getUserOrders(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const userId = req.user.userId;
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
@@ -219,10 +224,77 @@ export class GatewayController {
   @UseGuards(JwtAuthGuard)
   async getOrder(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
       'x-user-email': req.user.email,
       'x-user-role': req.user.role
     };
     return this.gatewayService.proxyRequest(res, 'order-service', `orders/${id}`, 'GET', null, headers);
+  }
+
+  // ===== CART ROUTES =====
+
+  @Get('cart')
+  @UseGuards(JwtAuthGuard)
+  async getCart(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'authorization': req.headers.authorization,
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'order-service', 'cart', 'GET', null, headers);
+  }
+
+  @Post('cart/items')
+  @UseGuards(JwtAuthGuard)
+  async addCartItem(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const itemData = {
+      ...body,
+      userId: req.user.userId 
+    };
+    const headers = {
+      'authorization': req.headers.authorization,
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'order-service', 'cart/items', 'POST', itemData, headers);
+  }
+
+  @Patch('cart/items/:itemId')
+  @UseGuards(JwtAuthGuard)
+  async updateCartItem(@Param('itemId') itemId: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'authorization': req.headers.authorization,
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'order-service', `cart/items/${itemId}`, 'PATCH', body, headers);
+  }
+
+  @Delete('cart/items/:itemId')
+  @UseGuards(JwtAuthGuard)
+  async removeCartItem(@Param('itemId') itemId: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'authorization': req.headers.authorization,
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'order-service', `cart/items/${itemId}`, 'DELETE', null, headers);
+  }
+
+  @Delete('cart')
+  @UseGuards(JwtAuthGuard)
+  async clearCart(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    const headers = {
+      'authorization': req.headers.authorization,
+      'x-user-id': req.user.userId,
+      'x-user-email': req.user.email,
+      'x-user-role': req.user.role
+    };
+    return this.gatewayService.proxyRequest(res, 'order-service', 'cart', 'DELETE', null, headers);
   }
 }

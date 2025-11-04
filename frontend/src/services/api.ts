@@ -76,6 +76,35 @@ export interface ProductsResponse {
   };
 }
 
+export interface CartItem {
+  id: string;
+  productId: string;
+  product: Product;
+  quantity: number;
+  price: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Cart {
+  id: string;
+  userId: string;
+  items: CartItem[];
+  total: number;
+  totalItems: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddToCartRequest {
+  productId: string;
+  quantity: number;
+}
+
+export interface UpdateCartItemRequest {
+  quantity: number;
+}
+
 class ApiService {
 
   async healthCheck(): Promise<{ status: string; service: string }> {
@@ -145,11 +174,12 @@ class ApiService {
 
       // Handle unauthorized responses
       if (response.status === 401) {
-        console.error('ApiService: Unauthorized - clearing auth data');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        window.dispatchEvent(new Event('storage'));
-        throw new Error('Authentication required. Please login again.');
+        console.log("Unauthorized");
+        // console.error('ApiService: Unauthorized - clearing auth data');
+        // localStorage.removeItem('access_token');
+        // localStorage.removeItem('user');
+        // window.dispatchEvent(new Event('storage'));
+        // throw new Error('Authentication required. Please login again.');
       }
 
       // Handle forbidden responses
@@ -388,6 +418,43 @@ class ApiService {
   async getOrder(id: string): Promise<any> {
     return this.request<any>(`/orders/${id}`);
   }
+
+  // ===== CART ENDPOINTS =====
+  async getCart(): Promise<Cart> {
+    console.log('ApiService: Getting cart');
+    return this.request<Cart>('/cart');
+  }
+
+  async addToCart(cartData: AddToCartRequest): Promise<Cart> {
+    console.log('ApiService: Adding to cart', cartData);
+    return this.request<Cart>('/cart/items', {
+      method: 'POST',
+      body: JSON.stringify(cartData),
+    });
+  }
+
+  async updateCartItem(itemId: string, updateData: UpdateCartItemRequest): Promise<Cart> {
+    console.log('ApiService: Updating cart item', { itemId, updateData });
+    return this.request<Cart>(`/cart/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateData),
+    });
+  }
+
+  async removeFromCart(itemId: string): Promise<Cart> {
+    console.log('ApiService: Removing from cart', itemId);
+    return this.request<Cart>(`/cart/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearCart(): Promise<Cart> {
+    console.log('ApiService: Clearing cart');
+    return this.request<Cart>('/cart/clear', {
+      method: 'POST',
+    });
+  }
+
 }
 
 export const apiService = new ApiService();

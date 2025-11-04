@@ -1,11 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check, Loader2 } from "lucide-react"
-import { useParams, Link } from "react-router-dom"
-import { productApiService, type Product } from "@/services/product-api"
+import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check, Loader2, LogIn } from "lucide-react"
+import { useNavigate, useParams } from "react-router-dom"
+import { useCart } from "@/contexts/CartContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { apiService, type Product } from "@/services/api"
 
 export default function BookDetailPage() {
   const params = useParams()
@@ -13,9 +15,13 @@ export default function BookDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showAddedNotification, setShowAddedNotification] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [book, setBook] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { addToCart } = useCart()
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
 
   // Fetch book details from backend
   useEffect(() => {
@@ -23,7 +29,7 @@ export default function BookDetailPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const bookData = await productApiService.getProduct(bookId)
+        const bookData = await apiService.getProduct(bookId)
         setBook(bookData)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch book details')
@@ -39,11 +45,32 @@ export default function BookDetailPage() {
   }, [bookId])
 
   const inStock = book ? book.stock > 0 : false
-  const maxQuantity = book ? Math.min(quantity + 9, book.stock) : 1
 
-  const handleAddToCart = () => {
-    setShowAddedNotification(true)
-    setTimeout(() => setShowAddedNotification(false), 3000)
+  const handleAddToCart = async () => {
+    if (!book) return
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setShowLoginPrompt(true)
+      return
+    }
+    
+    try {
+      await addToCart(book.id, quantity)
+      setShowAddedNotification(true)
+      setTimeout(() => setShowAddedNotification(false), 3000)
+    } catch (err: any) {
+      if (err.message === 'Authentication required' || err.message === 'Please login to add items to cart') {
+        setShowLoginPrompt(true)
+      } else {
+        setError(err.message || 'Failed to add item to cart')
+      }
+      console.error('Error adding to cart:', err)
+    }
+  }
+
+  const handleLoginRedirect = () => {
+    navigate(`/login?redirect=/book/${bookId}`)
   }
 
   if (isLoading) {
@@ -66,12 +93,13 @@ export default function BookDetailPage() {
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-4">Book Not Found</h1>
             <p className="text-gray-600 mb-6">{error || "The book you're looking for doesn't exist."}</p>
-            <Link to="/shop">
-              <Button className="border-2 border-black">
-                <ChevronLeft size={20} />
-                Back to Shop
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => navigate('/shop')}
+              className="border-2 border-black"
+            >
+              <ChevronLeft size={20} />
+              Back to Shop
+            </Button>
           </div>
         </div>
       </main>
@@ -80,13 +108,49 @@ export default function BookDetailPage() {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white border-4 border-black max-w-md w-full animate-scale-in">
+            <div className="border-b-4 border-black p-6 bg-black text-white">
+              <div className="flex items-center gap-3">
+                <LogIn size={24} />
+                <h2 className="text-2xl font-bold">Login Required</h2>
+              </div>
+            </div>
+            <div className="p-8 space-y-6 text-center">
+              <p className="text-lg font-bold">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="flex-1 border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors"
+                >
+                  Continue Browsing
+                </button>
+                <button
+                  onClick={handleLoginRedirect}
+                  className="flex-1 border-2 border-black bg-black text-white p-3 font-bold uppercase hover:bg-white hover:text-black transition-colors"
+                >
+                  Login Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div className="border-b-2 border-black">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
-          <Link to="/shop" className="text-sm hover:font-bold transition-all inline-flex items-center gap-1">
+          <button 
+            onClick={() => navigate('/shop')}
+            className="text-sm hover:font-bold transition-all inline-flex items-center gap-1"
+          >
             <ChevronLeft size={16} />
             Back to Shop
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -102,7 +166,6 @@ export default function BookDetailPage() {
                   alt={book.title} 
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    // Fallback if image fails to load
                     const target = e.target as HTMLImageElement;
                     target.src = "/placeholder-book.jpg";
                   }}
@@ -219,7 +282,9 @@ export default function BookDetailPage() {
                       const val = Math.min(Math.max(1, Number(e.target.value)), book.stock)
                       setQuantity(val)
                     }}
-                    className="w-16 text-center border-2 border-black font-bold text-lg focus:outline-none focus:ring-2 focus:ring-black/50"
+                    min="1"
+                    max={book.stock}
+                    className="w-16 text-center border-2 border-black font-bold text-lg focus:outline-none focus:ring-2 focus:ring-black/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     onClick={() => setQuantity(Math.min(book.stock, quantity + 1))}
@@ -256,7 +321,7 @@ export default function BookDetailPage() {
             {showAddedNotification && (
               <div className="animate-slide-in-bottom fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-4 border-2 border-black rounded-none flex items-center gap-3 shadow-lg z-50">
                 <Check size={20} />
-                <span className="font-bold">Added {quantity} to cart!</span>
+                <span className="font-bold">Added {quantity} {quantity === 1 ? 'copy' : 'copies'} to cart!</span>
               </div>
             )}
           </div>
@@ -268,11 +333,12 @@ export default function BookDetailPage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Continue Shopping</h2>
           <p className="text-gray-300 mb-8 text-lg">Discover more books in our collection</p>
-          <Link to="/shop">
-            <Button className="bg-white text-black border-2 border-white hover:bg-black hover:text-white hover:border-white">
-              View All Books
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => navigate('/shop')}
+            className="bg-white text-black border-2 border-white hover:bg-black hover:text-white hover:border-white"
+          >
+            View All Books
+          </Button>
         </div>
       </section>
     </main>
