@@ -27,10 +27,18 @@ export class GatewayService {
 
     try {
       const url = `${serviceUrl}/${path}`;
+
+      // ===== PERBAIKAN DI SINI =====
+      // Pastikan GET dan DELETE tidak pernah mengirim 'data' (body).
+      // Axios akan error jika 'data' adalah 'null' untuk GET request.
+      const isDataAllowed = method !== 'GET' && method !== 'DELETE';
+      // ===========================
+
       const config = {
         method,
         url,
-        data: body,
+        // Kirim 'body' HANYA jika metode mengizinkannya.
+        data: isDataAllowed ? body : undefined,
         headers: {
           'Content-Type': 'application/json',
           ...headers,

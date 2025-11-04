@@ -21,11 +21,18 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // Helper method to check admin role from headers
+  // Helper method to check admin role from headers - FIXED: Case insensitive
   private checkAdminRole(headers: any): void {
     const userRole = headers['x-user-role'];
-    if (!userRole || userRole !== 'admin') {
-      throw new ForbiddenException('Insufficient permissions');
+    console.log('Checking admin role:', { userRole, headers: headers['x-user-role'] });
+    
+    if (!userRole) {
+      throw new ForbiddenException('No role provided in headers');
+    }
+    
+    // Case insensitive check
+    if (userRole.toLowerCase() !== 'admin') {
+      throw new ForbiddenException(`Insufficient permissions. Required: admin, Got: ${userRole}`);
     }
   }
 
@@ -35,6 +42,7 @@ export class ProductsController {
     @Body() createProductDto: CreateProductDto,
     @Headers() headers: any
   ) {
+    console.log('Create product headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.create(createProductDto);
   }
@@ -69,6 +77,7 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
     @Headers() headers: any
   ) {
+    console.log('Update product headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.update(id, updateProductDto);
   }
@@ -79,6 +88,7 @@ export class ProductsController {
     @Param('id') id: string,
     @Headers() headers: any
   ) {
+    console.log('Delete product headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.remove(id);
   }
@@ -90,6 +100,7 @@ export class ProductsController {
     @Body('quantity') quantity: number,
     @Headers() headers: any
   ) {
+    console.log('Update stock headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.updateStock(id, quantity);
   }
@@ -100,6 +111,7 @@ export class ProductsController {
     @Param('id') id: string,
     @Headers() headers: any
   ) {
+    console.log('Permanent delete headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.permanentRemove(id);
   }
@@ -110,6 +122,7 @@ export class ProductsController {
     @Param('id') id: string,
     @Headers() headers: any
   ) {
+    console.log('Restore product headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.restore(id);
   }
@@ -119,10 +132,11 @@ export class ProductsController {
   async findAllAdmin(
     @Headers() headers: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
+    console.log('Admin all products headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.findAllAdmin(page, limit, category, search);
   }
@@ -133,6 +147,7 @@ export class ProductsController {
     @Param('id') id: string,
     @Headers() headers: any
   ) {
+    console.log('Admin product detail headers:', headers);
     this.checkAdminRole(headers);
     return this.productsService.findOne(id);
   }
