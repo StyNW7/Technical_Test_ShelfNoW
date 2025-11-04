@@ -2,14 +2,15 @@ import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, Req, Res
 import type { Response, Request } from 'express';
 import { GatewayService } from './gateway.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { RolesGuard } from './auth/roles.guard';
-import { Roles } from './auth/roles.decorators';
+// import { RolesGuard } from './auth/roles.guard'; // <-- DIHAPUS
+// import { Roles } from './auth/roles.decorators'; // <-- DIHAPUS
 
+// Interface ini masih berguna untuk JwtAuthGuard
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
     email: string;
-    role: string;
+    role: string; // Walaupun mungkin salah dari JWT, kita biarkan di interface
   };
 }
 
@@ -47,10 +48,13 @@ export class GatewayController {
   @Get('auth/profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: AuthenticatedRequest, @Res() res: Response) {
+    // Kita teruskan token. Service di belakang yang akan memvalidasi.
     const headers = {
+      'authorization': req.headers.authorization,
+      // Kita juga bisa kirim 'x-user-id' jika service di belakang membutuhkannya
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS karena tidak bisa dipercaya dari JWT
     };
     return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/profile', 'GET', null, headers);
   }
@@ -61,7 +65,8 @@ export class GatewayController {
     const headers = {
       'authorization': req.headers.authorization
     };
-    return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/validate', 'POST', null, headers);
+    // PERBAIKAN: Mengirim {} (objek kosong) alih-alih null untuk menghindari 400 Bad Request
+    return this.gatewayService.proxyRequest(res, 'auth-service', 'auth/validate', 'POST', {}, headers);
   }
 
   // ===== PRODUCT ROUTES =====
@@ -98,57 +103,61 @@ export class GatewayController {
 
   // Admin only routes
   @Post('products')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async createProduct(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization, // Teruskan token
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'product-service', 'products', 'POST', body, headers);
   }
 
   @Patch('products/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async updateProduct(@Param('id') id: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}`, 'PATCH', body, headers);
   }
 
   @Delete('products/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async deleteProduct(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}`, 'DELETE', null, headers);
   }
 
   @Patch('products/:id/stock')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async updateStock(@Param('id') id: string, @Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'product-service', `products/${id}/stock`, 'PATCH', body, headers);
   }
 
   // Admin-only product listing (including inactive products)
   @Get('products/admin/all')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async getAllProductsAdmin(
     @Query('page') page: number,
     @Query('limit') limit: number,
@@ -167,22 +176,24 @@ export class GatewayController {
     const path = queryString ? `products/admin/all?${queryString}` : 'products/admin/all';
     
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     
     return this.gatewayService.proxyRequest(res, 'product-service', path, 'GET', null, headers);
   }
 
   @Get('products/admin/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard) // <-- RolesGuard DIHAPUS
+  // @Roles('admin') // <-- DIHAPUS
   async getProductAdmin(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'product-service', `products/admin/${id}`, 'GET', null, headers);
   }
@@ -191,14 +202,16 @@ export class GatewayController {
   @Post('orders')
   @UseGuards(JwtAuthGuard)
   async createOrder(@Body() body: any, @Req() req: AuthenticatedRequest, @Res() res: Response) {
+    // Rute ini adalah alasan kita tetap memakai JwtAuthGuard, untuk mendapatkan req.user.userId
     const orderData = {
       ...body,
-      userId: req.user.userId
+      userId: req.user.userId 
     };
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'order-service', 'orders', 'POST', orderData, headers);
   }
@@ -208,10 +221,12 @@ export class GatewayController {
   async getUserOrders(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const userId = req.user.userId;
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
+    // Perhatikan: path Anda `orders/user/${userId}`
     return this.gatewayService.proxyRequest(res, 'order-service', `orders/user/${userId}`, 'GET', null, headers);
   }
 
@@ -219,9 +234,10 @@ export class GatewayController {
   @UseGuards(JwtAuthGuard)
   async getOrder(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Res() res: Response) {
     const headers = {
+      'authorization': req.headers.authorization,
       'x-user-id': req.user.userId,
-      'x-user-email': req.user.email,
-      'x-user-role': req.user.role
+      'x-user-email': req.user.email
+      // 'x-user-role' DIHAPUS
     };
     return this.gatewayService.proxyRequest(res, 'order-service', `orders/${id}`, 'GET', null, headers);
   }

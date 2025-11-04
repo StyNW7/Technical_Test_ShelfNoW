@@ -77,6 +77,27 @@ export interface ProductsResponse {
 }
 
 class ApiService {
+
+  async healthCheck(): Promise<{ status: string; service: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        return await response.json();
+      } else {
+        throw new Error(`Health check failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Health check failed:', error);
+      throw error;
+    }
+  }
+
   private getAuthToken(): string | null {
     const token = localStorage.getItem('access_token');
     console.log('ApiService: Retrieved token from localStorage', { 
@@ -118,7 +139,8 @@ class ApiService {
       console.log('ApiService: Response received', {
         status: response.status,
         statusText: response.statusText,
-        url: response.url
+        url: response.url,
+        ok: response.ok
       });
 
       // Handle unauthorized responses
@@ -138,39 +160,57 @@ class ApiService {
       }
 
       if (!response.ok) {
+        // First try to get the response as text to see what we're dealing with
+        const responseText = await response.text();
+        console.error('ApiService: Response not OK', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText
+        });
+
         let errorMessage = `HTTP error! status: ${response.status}`;
         
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-          console.error('ApiService: Error response JSON', errorData);
-        } catch {
+        // Try to parse as JSON if it looks like JSON
+        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
           try {
-            const errorText = await response.text();
-            if (errorText) {
-              errorMessage = errorText;
-            }
-          } catch {
-            // Ignore text parsing errors
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (jsonError) {
+            // If JSON parsing fails, use the text as error message
+            errorMessage = responseText || errorMessage;
           }
+        } else {
+          // If it's not JSON, use the text directly
+          errorMessage = responseText || errorMessage;
         }
         
         throw new Error(errorMessage);
       }
 
-      // If response is OK, try to parse as JSON
-      try {
-        // For 204 No Content responses
-        if (response.status === 204 || response.headers.get('content-length') === '0') {
-          return {} as T;
+      // If response is OK, handle different content types
+      const contentType = response.headers.get('content-type');
+      
+      // For 204 No Content or empty responses
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        console.log('ApiService: No content response');
+        return {} as T;
+      }
+
+      // Check if response is JSON
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const data = await response.json();
+          console.log('ApiService: JSON response parsed successfully');
+          return data;
+        } catch (jsonError) {
+          console.error('ApiService: JSON parsing failed', jsonError);
+          throw new Error('Server returned invalid JSON response');
         }
-        
-        const data = await response.json();
-        console.log('ApiService: Request successful', { data: data ? 'data received' : 'no data' });
-        return data;
-      } catch (jsonError) {
-        console.error('ApiService: JSON parsing error', jsonError);
-        throw new Error('Server returned invalid JSON response');
+      } else {
+        // For non-JSON responses, return as text
+        console.log('ApiService: Non-JSON response, returning as text');
+        const text = await response.text();
+        return text as unknown as T;
       }
       
     } catch (error: any) {
@@ -235,12 +275,23 @@ class ApiService {
   async validateToken(): Promise<{ valid: boolean; user?: any; error?: string }> {
     try {
       console.log('ApiService: Validating token');
-      const response = await this.request<{ valid: boolean; user?: any; error?: string }>('/auth/validate', {
+      const response = await this.request<any>('/auth/validate', {
         method: 'POST',
       });
 
       console.log('ApiService: Token validation result', response);
-      return response;
+      
+      // Handle different response formats
+      if (typeof response === 'string') {
+        console.error('ApiService: Token validation returned string instead of JSON', response);
+        return { valid: false, error: 'Invalid response format' };
+      }
+      
+      if (response.valid && response.user) {
+        return response;
+      } else {
+        return { valid: false, error: response.error || 'Token invalid' };
+      }
     } catch (error: any) {
       console.error('ApiService: Token validation request failed:', error);
       return { valid: false, error: error.message };

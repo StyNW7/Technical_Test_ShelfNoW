@@ -6,16 +6,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { apiService, type Product, type CreateProductRequest } from '../../services/api';
 import BookForm from '@/components/admin/book-form';
 
-interface ApiResponse {
-  products: Product[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
 export default function AdminDashboard() {
   const [books, setBooks] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
