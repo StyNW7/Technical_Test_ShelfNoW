@@ -62,7 +62,7 @@ services:
     environment:
       - ./frontend/.env
     volumes:
-      - ./Frontend:/app
+      - ./frontend:/app
       - /app/node_modules
     depends_on:
       - auth-service
