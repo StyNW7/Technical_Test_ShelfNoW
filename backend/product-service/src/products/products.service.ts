@@ -50,14 +50,10 @@ export class ProductsService {
     includeInactive: boolean = false
   ) {
     
-    // ===== PERBAIKAN DI SINI =====
-    // Konversi string dari query params menjadi angka (Number)
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 10;
-    // Pastikan nilai tidak negatif
     const skip = (pageNum - 1) * limitNum;
     const take = limitNum;
-    // ============================
 
     const where: any = {};
 
@@ -80,8 +76,8 @@ export class ProductsService {
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        skip, // Sekarang ini adalah angka
-        take, // Sekarang ini adalah angka
+        skip,
+        take,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.product.count({ where }),

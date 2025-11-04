@@ -70,9 +70,17 @@ function App() {
                     </ProtectedRoute>
                 } />
 
-                <Route path="/transaction" element={<TransactionsPage/>} />
+                <Route path="/transaction" element={
+                  <ProtectedRoute>
+                    <TransactionsPage/>
+                  </ProtectedRoute>
+                } />
 
-                <Route path="/transactions/:id" element={<TransactionDetailPage/>} />
+                <Route path="/transactions/:id" element={
+                  <ProtectedRoute>
+                    <TransactionDetailPage/>
+                  </ProtectedRoute>
+                } />
 
                 <Route path="*" element={<NotFoundPage />} />
 

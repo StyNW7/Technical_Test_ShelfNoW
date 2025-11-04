@@ -3,8 +3,6 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-
-// Interface untuk payload yang dikirim dari gateway
 interface AuthenticatedUser {
   userId: string;
   email: string;
@@ -15,7 +13,6 @@ interface AuthenticatedUser {
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // Helper untuk memeriksa role dari payload
   private checkAdminRole(user: AuthenticatedUser): void {
     if (!user || !user.role) {
       throw new ForbiddenException('No user role provided in payload');
@@ -29,7 +26,6 @@ export class ProductsController {
   @MessagePattern('products_create')
   async create(@Payload() payload: { createDto: CreateProductDto; user: AuthenticatedUser }) {
     this.checkAdminRole(payload.user);
-    // Kita gunakan new ValidationPipe() di sini untuk memvalidasi DTO
     const createProductDto = new CreateProductDto();
     Object.assign(createProductDto, payload.createDto);
     return this.productsService.create(createProductDto);
@@ -102,7 +98,6 @@ export class ProductsController {
   @MessagePattern('products_get_admin_one')
   async findOneAdmin(@Payload() payload: { id: string; user: AuthenticatedUser }) {
     this.checkAdminRole(payload.user);
-    // Menggunakan findOne yang sudah ada karena service-nya sama
     return this.productsService.findOne(payload.id);
   }
 
