@@ -1,13 +1,16 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Cart, CartItem, CartSummary } from './interfaces/cart.interface';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
 @Injectable()
 export class CartService {
-  constructor(@Inject('PRISMA_CLIENT') private prisma: PrismaClient) {}
+  // Ganti @Inject('PRISMA_CLIENT') dengan injeksi PrismaService standar
+  constructor(private prisma: PrismaService) {}
 
+  // ... (SEMUA KODE LAINNYA DI FILE INI SAMA PERSIS) ...
+  // ... (getOrCreateCart, addToCart, updateCartItem, dll. sudah benar) ...
   async getOrCreateCart(userId: string): Promise<Cart> {
     let cart = await this.prisma.cart.findUnique({
       where: { userId },

@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CartService } from '../cart/cart.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CreateOrderFromCartDto } from './dto/create-order-from-cart.dto';
@@ -9,12 +9,15 @@ import { TransactionStatus } from 'src/transactions/interfaces/transaction.inter
 
 @Injectable()
 export class OrdersService {
+  // Ganti @Inject('PRISMA_CLIENT') dengan injeksi PrismaService standar
   constructor(
-    @Inject('PRISMA_CLIENT') private prisma: PrismaClient,
+    private prisma: PrismaService,
     private readonly cartService: CartService,
     private readonly transactionsService: TransactionsService,
   ) {}
 
+  // ... (SEMUA KODE LAINNYA DI FILE INI SAMA PERSIS) ...
+  // ... (createOrderFromCart, findAll, findOne, dll. sudah benar) ...
   async createOrderFromCart(createOrderDto: CreateOrderFromCartDto): Promise<Order> {
     return this.prisma.$transaction(async (tx) => {
       // Get cart items

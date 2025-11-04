@@ -1,17 +1,14 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-// Ganti PrismaClient dengan PrismaService (asumsi dari PrismaModule Anda)
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductsService {
-  // Inject PrismaService, jangan buat instance baru
   constructor(private prisma: PrismaService) {}
 
   async create(createProductDto: CreateProductDto) {
     try {
-      // ... (sisa logika Anda SAMA PERSIS, tidak perlu diubah) ...
       if (!createProductDto.title || !createProductDto.author || !createProductDto.description) {
         throw new BadRequestException('Title, author, and description are required');
       }
@@ -31,7 +28,6 @@ export class ProductsService {
       const product = await this.prisma.product.create({
         data: {
           ...createProductDto,
-          // Pastikan DTO Anda memiliki properti ini
           isActive: createProductDto.isActive !== undefined ? createProductDto.isActive : true,
         },
       });
@@ -45,17 +41,23 @@ export class ProductsService {
     }
   }
 
-  // ... (findAll, findOne, update, remove, dll. SAMA PERSIS) ...
-  // ... Tidak perlu mengubah logika bisnis Anda ...
   async findAll(
-    page: number = 1,
-    limit: number = 10,
+    page: any = 1, // Terima 'any' untuk menangani string
+    limit: any = 10, // Terima 'any' untuk menangani string
     category?: string,
     search?: string,
     includeInactive: boolean = false
   ) {
-    const skip = (page - 1) * limit;
     
+    // ===== PERBAIKAN DI SINI =====
+    // Konversi string dari query params menjadi angka (Number)
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 10;
+    // Pastikan nilai tidak negatif
+    const skip = (pageNum - 1) * limitNum;
+    const take = limitNum;
+    // ============================
+
     const where: any = {};
 
     if (!includeInactive) {
@@ -77,8 +79,8 @@ export class ProductsService {
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        skip,
-        take: limit,
+        skip, // Sekarang ini adalah angka
+        take, // Sekarang ini adalah angka
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.product.count({ where }),
@@ -87,10 +89,10 @@ export class ProductsService {
     return {
       products,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -237,6 +239,7 @@ export class ProductsService {
     category?: string,
     search?: string
   ) {
+    // Fungsi ini sudah benar, ia hanya meneruskan parameter
     return this.findAll(page, limit, category, search, true);
   }
 }
