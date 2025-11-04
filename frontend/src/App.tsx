@@ -28,6 +28,8 @@ import BookDetailPage from "./pages/Shop/[id]/Book";
 import AdminPage from "./pages/Admin/page";
 import ProtectedRoute from "./components/ProtectedRoute";
 import CartPage from "./pages/Cart/page";
+import TransactionsPage from "./pages/Transaction/page";
+import TransactionDetailPage from "./pages/Transaction/[id]/page";
 
 function App() {
 
@@ -68,15 +70,19 @@ function App() {
                     </ProtectedRoute>
                 } />
 
-                <Route path="/admin" element={
-                    <ProtectedRoute adminOnly>
-                      <AdminPage/>
-                    </ProtectedRoute>
-                } />
+                <Route path="/transaction" element={<TransactionsPage/>} />
+
+                <Route path="/transactions/:id" element={<TransactionDetailPage/>} />
 
                 <Route path="*" element={<NotFoundPage />} />
 
             </Route>
+
+            <Route path="/admin" element={
+                    <ProtectedRoute adminOnly>
+                      <AdminPage/>
+                    </ProtectedRoute>
+                } />
 
           </Routes>
 
