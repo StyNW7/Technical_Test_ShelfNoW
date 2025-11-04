@@ -1,8 +1,7 @@
-// src/transactions/transactions.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-// Import from Prisma client directly
-import { Transaction, TransactionStatus } from '@prisma/client';
+// 1. Impor 'Prisma' (untuk tipe TransactionClient)
+import { Transaction, TransactionStatus, Prisma } from '@prisma/client'; 
 
 @Injectable()
 export class TransactionsService {
@@ -15,23 +14,30 @@ export class TransactionsService {
       amount: number;
       paymentMethod: string;
       paymentDetails?: any;
-    }
+    },
+    // 2. PERBAIKAN TIPE DI SINI:
+    // Gunakan tipe 'Prisma.TransactionClient' yang disediakan oleh Prisma
+    // untuk klien transaksi, bukan 'PrismaService'.
+    tx?: Prisma.TransactionClient 
   ): Promise<Transaction> {
-    return this.prisma.transaction.create({
+    
+    // 3. 'client' sekarang memiliki tipe yang kompatibel
+    const client = tx || this.prisma;
+
+    return client.transaction.create({
       data: {
         orderId: createDto.orderId,
         userId: createDto.userId,
         amount: createDto.amount,
         paymentMethod: createDto.paymentMethod,
-        paymentDetails: createDto.paymentDetails,
-        status: TransactionStatus.PENDING,
-      },
-      include: {
-        order: true,
+        paymentDetails: createDto.paymentDetails || undefined,
+        status: TransactionStatus.PENDING, 
       },
     });
   }
 
+  // ... sisa file Anda (findAll, findOne, dll.) tetap sama ...
+  
   async findAll(): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
       include: { order: true },
@@ -55,7 +61,7 @@ export class TransactionsService {
 
   async findByUserId(userId: string): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
-      where: { userId },
+      where: { userId }, 
       include: { order: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -63,7 +69,7 @@ export class TransactionsService {
 
   async updateTransactionStatus(
     id: string,
-    status: TransactionStatus,
+    status: TransactionStatus, 
   ): Promise<Transaction> {
     return this.prisma.transaction.update({
       where: { id },

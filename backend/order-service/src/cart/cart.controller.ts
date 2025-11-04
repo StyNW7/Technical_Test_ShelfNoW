@@ -1,4 +1,5 @@
-import { Controller, Inject } from '@nestjs/common';
+// src/cart/cart.controller.ts
+import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
@@ -6,10 +7,10 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
 @Controller()
 export class CartController {
-  constructor(@Inject(CartService) private readonly cartService: CartService) {}
+  constructor(private readonly cartService: CartService) {}
 
   @MessagePattern('cart_get')
-  async getCart(@Payload() userId: string) {
+  async getCart(@Payload() userId: string): Promise<any> {
     try {
       const cart = await this.cartService.getOrCreateCart(userId);
       return {
@@ -25,7 +26,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_add_item')
-  async addToCart(@Payload() data: { userId: string; addToCartDto: AddToCartDto }) {
+  async addToCart(@Payload() data: { userId: string; addToCartDto: AddToCartDto }): Promise<any> {
     try {
       const cart = await this.cartService.addToCart(data.userId, data.addToCartDto);
       return {
@@ -41,7 +42,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_update_item')
-  async updateCartItem(@Payload() data: { userId: string; itemId: string; updateCartItemDto: UpdateCartItemDto }) {
+  async updateCartItem(@Payload() data: { userId: string; itemId: string; updateCartItemDto: UpdateCartItemDto }): Promise<any> {
     try {
       const cart = await this.cartService.updateCartItem(
         data.userId,
@@ -61,7 +62,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_remove_item')
-  async removeFromCart(@Payload() data: { userId: string; itemId: string }) {
+  async removeFromCart(@Payload() data: { userId: string; itemId: string }): Promise<any> {
     try {
       const cart = await this.cartService.removeFromCart(data.userId, data.itemId);
       return {
@@ -77,7 +78,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_clear')
-  async clearCart(@Payload() userId: string) {
+  async clearCart(@Payload() userId: string): Promise<any> {
     try {
       const cart = await this.cartService.clearCart(userId);
       return {
@@ -94,7 +95,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_get_summary')
-  async getCartSummary(@Payload() userId: string) {
+  async getCartSummary(@Payload() userId: string): Promise<any> {
     try {
       const summary = await this.cartService.getCartSummary(userId);
       return {
@@ -110,7 +111,7 @@ export class CartController {
   }
 
   @MessagePattern('cart_get_items')
-  async getCartItems(@Payload() userId: string) {
+  async getCartItems(@Payload() userId: string): Promise<any> {
     try {
       const items = await this.cartService.getCartItems(userId);
       return {
