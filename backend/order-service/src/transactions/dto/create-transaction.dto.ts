@@ -1,4 +1,3 @@
-// src/transactions/dto/create-transaction.dto.ts
 import { TransactionStatus } from '@prisma/client';
 
 export class CreateTransactionDto {

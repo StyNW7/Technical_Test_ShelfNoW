@@ -1,7 +1,6 @@
 import { Controller, Inject } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TransactionsService } from './transactions.service';
-// PERBAIKAN: Impor TransactionStatus dari @prisma/client, BUKAN interface lokal
 import { TransactionStatus } from '@prisma/client'; 
 
 @Controller()
@@ -59,7 +58,7 @@ export class TransactionsController {
   }
 
   @MessagePattern('transaction_update_status')
-  async updateStatus(@Payload() data: { id: string; status: TransactionStatus }) { // Tipe ini sekarang benar
+  async updateStatus(@Payload() data: { id: string; status: TransactionStatus }) {
     try {
       const transaction = await this.transactionsService.updateTransactionStatus(
         data.id,
@@ -78,7 +77,4 @@ export class TransactionsController {
     }
   }
 
-  // Hapus 'transaction_get_stats' karena service-nya tidak memiliki fungsi itu
-  // @MessagePattern('transaction_get_stats')
-  // async getStats() { ... }
 }

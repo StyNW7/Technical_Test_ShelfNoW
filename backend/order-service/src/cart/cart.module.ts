@@ -1,13 +1,10 @@
-// Lokasi: order-service/src/cart/cart.module.ts
 import { Module } from '@nestjs/common';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
-// import { CartHttpController } from './cart-http.controller'; // <-- Hapus ini
-import { ClientsModule, Transport } from '@nestjs/microservices'; // <-- Impor
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
-    // Daftarkan product-service agar bisa di-inject
     ClientsModule.register([
       {
         name: 'PRODUCT_SERVICE',
@@ -19,7 +16,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices'; // <-- Impor
       },
     ]),
   ],
-  controllers: [CartController], // <-- Pastikan CartHttpController sudah dihapus
+  controllers: [CartController],
   providers: [CartService],
   exports: [CartService],
 })

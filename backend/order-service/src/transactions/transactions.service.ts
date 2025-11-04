@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-// Impor 'Prisma' (untuk tipe TransactionClient)
 import { Transaction, TransactionStatus, Prisma } from '@prisma/client'; 
 
 @Injectable()
@@ -15,7 +14,6 @@ export class TransactionsService {
       paymentMethod: string;
       paymentDetails?: any;
     },
-    // PERBAIKAN TIPE: Gunakan Prisma.TransactionClient
     tx?: Prisma.TransactionClient 
   ): Promise<Transaction> {
     

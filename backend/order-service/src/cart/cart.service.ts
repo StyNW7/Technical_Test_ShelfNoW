@@ -6,7 +6,6 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
-// Definisikan tipe data Product (salin dari frontend api.ts)
 interface Product {
   id: string;
   title: string;
@@ -16,19 +15,16 @@ interface Product {
   imageUrl?: string;
 }
 
-// ===== PERBAIKAN DI SINI (1) =====
-// Izinkan 'product' menjadi 'null'
 interface EnrichedCartItem extends CartItem {
   product: Product | null; 
 }
-// ==================================
 
 interface FullCart {
   id: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
-  items: EnrichedCartItem[]; // Ganti nama 'cartItems' menjadi 'items'
+  items: EnrichedCartItem[];
   totalItems: number;
   totalPrice: number;
 }
@@ -78,7 +74,6 @@ export class CartService {
         totalPrice += item.price * item.quantity;
         return {
           ...item,
-          // Kode ini sekarang valid karena 'EnrichedCartItem' mengizinkan null
           product: productMap.get(item.productId) || null, 
         };
       });

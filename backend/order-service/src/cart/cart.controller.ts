@@ -1,4 +1,3 @@
-// src/cart/cart.controller.ts
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CartService } from './cart.service';
