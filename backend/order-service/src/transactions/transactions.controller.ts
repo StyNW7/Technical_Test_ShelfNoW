@@ -1,60 +1,111 @@
-import { Controller, Inject } from '@nestjs/common';
+// src/transactions/transactions.controller.ts
+import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TransactionsService } from './transactions.service';
-import { TransactionStatus } from './interfaces/transaction.interface';
+// Import from Prisma client
+import { TransactionStatus } from '@prisma/client';
 
 @Controller()
 export class TransactionsController {
-  constructor(
-    @Inject(TransactionsService) private readonly transactionsService: TransactionsService,
-  ) {}
+  constructor(private readonly transactionsService: TransactionsService) {}
+
+  @MessagePattern('transaction_create')
+  async create(@Payload() createDto: {
+    orderId: string;
+    userId: string;
+    amount: number;
+    paymentMethod: string;
+    paymentDetails?: any;
+  }) {
+    try {
+      const transaction = await this.transactionsService.createTransaction(createDto);
+      return {
+        success: true,
+        data: transaction,
+        message: 'Transaction created successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
 
   @MessagePattern('transaction_find_all')
   async findAll() {
-    const transactions = await this.transactionsService.findAll();
-    return {
-      success: true,
-      data: transactions,
-    };
+    try {
+      const transactions = await this.transactionsService.findAll();
+      return {
+        success: true,
+        data: transactions,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
   }
 
   @MessagePattern('transaction_find_one')
   async findOne(@Payload() id: string) {
-    const transaction = await this.transactionsService.findOne(id);
-    if (!transaction) {
+    try {
+      const transaction = await this.transactionsService.findOne(id);
+      if (!transaction) {
+        return {
+          success: false,
+          message: 'Transaction not found',
+        };
+      }
+      return {
+        success: true,
+        data: transaction,
+      };
+    } catch (error) {
       return {
         success: false,
-        message: 'Transaction not found',
+        message: error.message,
       };
     }
-    return {
-      success: true,
-      data: transaction,
-    };
   }
 
   @MessagePattern('transaction_find_by_user')
   async findByUserId(@Payload() userId: string) {
-    const transactions = await this.transactionsService.findByUserId(userId);
-    return {
-      success: true,
-      data: transactions,
-    };
+    try {
+      const transactions = await this.transactionsService.findByUserId(userId);
+      return {
+        success: true,
+        data: transactions,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
   }
 
   @MessagePattern('transaction_find_by_order')
   async findByOrderId(@Payload() orderId: string) {
-    const transaction = await this.transactionsService.findByOrderId(orderId);
-    if (!transaction) {
+    try {
+      const transaction = await this.transactionsService.findByOrderId(orderId);
+      if (!transaction) {
+        return {
+          success: false,
+          message: 'Transaction not found for this order',
+        };
+      }
+      return {
+        success: true,
+        data: transaction,
+      };
+    } catch (error) {
       return {
         success: false,
-        message: 'Transaction not found for this order',
+        message: error.message,
       };
     }
-    return {
-      success: true,
-      data: transaction,
-    };
   }
 
   @MessagePattern('transaction_update_status')
@@ -75,14 +126,5 @@ export class TransactionsController {
         message: error.message,
       };
     }
-  }
-
-  @MessagePattern('transaction_get_stats')
-  async getStats() {
-    const stats = await this.transactionsService.getTransactionStats();
-    return {
-      success: true,
-      data: stats,
-    };
   }
 }

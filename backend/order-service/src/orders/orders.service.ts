@@ -1,23 +1,21 @@
-import { Injectable, Inject } from '@nestjs/common';
+// src/orders/orders.service.ts
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CartService } from '../cart/cart.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { CreateOrderFromCartDto } from './dto/create-order-from-cart.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { Order, OrderStatus } from './interfaces/order.interface';
-import { TransactionStatus } from 'src/transactions/interfaces/transaction.interface';
+// Import from Prisma client directly
+import { Order, OrderStatus, TransactionStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
-  // Ganti @Inject('PRISMA_CLIENT') dengan injeksi PrismaService standar
   constructor(
     private prisma: PrismaService,
     private readonly cartService: CartService,
     private readonly transactionsService: TransactionsService,
   ) {}
 
-  // ... (SEMUA KODE LAINNYA DI FILE INI SAMA PERSIS) ...
-  // ... (createOrderFromCart, findAll, findOne, dll. sudah benar) ...
   async createOrderFromCart(createOrderDto: CreateOrderFromCartDto): Promise<Order> {
     return this.prisma.$transaction(async (tx) => {
       // Get cart items
@@ -59,7 +57,7 @@ export class OrdersService {
         amount: totalAmount,
         paymentMethod: createOrderDto.paymentMethod,
         paymentDetails: createOrderDto.paymentDetails,
-      }, tx);
+      });
 
       // Clear cart after successful order
       await this.cartService.clearCart(createOrderDto.userId);
@@ -141,7 +139,7 @@ export class OrdersService {
 
     const totalOrders = orders.length;
     const totalRevenue = orders
-      .filter(order => order.transaction?.status === 'COMPLETED')
+      .filter(order => order.transaction?.status === TransactionStatus.COMPLETED)
       .reduce((sum, order) => sum + order.totalAmount, 0);
     const pendingOrders = orders.filter(order => order.status === OrderStatus.PENDING).length;
 
