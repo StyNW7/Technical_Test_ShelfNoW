@@ -9,6 +9,8 @@ export function Navbar() {
 
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
+  console.log("User: ", user);
+
   const handleLogout = () => {
     logout();
     window.location.href = '/';

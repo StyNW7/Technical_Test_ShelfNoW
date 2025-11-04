@@ -3,10 +3,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check, Loader2, LogIn } from "lucide-react"
+import { Heart, Star, ShoppingCart, User, Package, ChevronLeft, Check, Loader2 } from "lucide-react"
 import { useNavigate, useParams } from "react-router-dom"
 import { useCart } from "@/contexts/CartContext"
-import { useAuth } from "@/contexts/AuthContext"
 import { apiService, type Product } from "@/services/api"
 
 export default function BookDetailPage() {
@@ -15,12 +14,10 @@ export default function BookDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showAddedNotification, setShowAddedNotification] = useState(false)
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [book, setBook] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { addToCart } = useCart()
-  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
   // Fetch book details from backend
@@ -49,28 +46,18 @@ export default function BookDetailPage() {
   const handleAddToCart = async () => {
     if (!book) return
     
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      setShowLoginPrompt(true)
-      return
-    }
-    
     try {
       await addToCart(book.id, quantity)
       setShowAddedNotification(true)
       setTimeout(() => setShowAddedNotification(false), 3000)
     } catch (err: any) {
-      if (err.message === 'Authentication required' || err.message === 'Please login to add items to cart') {
-        setShowLoginPrompt(true)
+      if (err.message === 'Authentication required') {
+        navigate('/login')
       } else {
         setError(err.message || 'Failed to add item to cart')
       }
       console.error('Error adding to cart:', err)
     }
-  }
-
-  const handleLoginRedirect = () => {
-    navigate(`/login?redirect=/book/${bookId}`)
   }
 
   if (isLoading) {
@@ -108,39 +95,6 @@ export default function BookDetailPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Login Prompt Modal */}
-      {showLoginPrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white border-4 border-black max-w-md w-full animate-scale-in">
-            <div className="border-b-4 border-black p-6 bg-black text-white">
-              <div className="flex items-center gap-3">
-                <LogIn size={24} />
-                <h2 className="text-2xl font-bold">Login Required</h2>
-              </div>
-            </div>
-            <div className="p-8 space-y-6 text-center">
-              <p className="text-lg font-bold">
-                You need to be logged in to add items to your cart.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLoginPrompt(false)}
-                  className="flex-1 border-2 border-black p-3 font-bold uppercase hover:bg-gray-100 transition-colors"
-                >
-                  Continue Browsing
-                </button>
-                <button
-                  onClick={handleLoginRedirect}
-                  className="flex-1 border-2 border-black bg-black text-white p-3 font-bold uppercase hover:bg-white hover:text-black transition-colors"
-                >
-                  Login Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Breadcrumb */}
       <div className="border-b-2 border-black">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">

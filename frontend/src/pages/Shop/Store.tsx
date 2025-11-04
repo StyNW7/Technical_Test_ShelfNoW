@@ -6,7 +6,7 @@ import { FilterSidebar } from "@/components/shop/filter-sidebar"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
-import { productApiService, type Product } from "@/services/product-api"
+import { apiService, type Product } from "@/services/api"
 
 const ITEMS_PER_PAGE = 12
 
@@ -28,7 +28,7 @@ export default function ShopPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const response = await productApiService.getProducts(
+        const response = await apiService.getProducts(
           currentPage,
           ITEMS_PER_PAGE,
           selectedCategory === "All" ? undefined : selectedCategory,
@@ -46,7 +46,7 @@ export default function ShopPage() {
 
     const fetchCategories = async () => {
       try {
-        const categoriesList = await productApiService.getCategories()
+        const categoriesList = await apiService.getCategories()
         setCategories(categoriesList)
       } catch (err) {
         console.error('Error fetching categories:', err)

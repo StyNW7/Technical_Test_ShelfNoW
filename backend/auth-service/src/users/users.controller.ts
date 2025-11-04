@@ -10,6 +10,8 @@ interface AuthenticatedPayload {
     userId: string;
     email: string;
     role: string;
+    firstName?: string;
+    lastName?: string;
   };
   // Properti lain bisa ditambahkan di sini
   id?: string; // Untuk findOne, update, delete

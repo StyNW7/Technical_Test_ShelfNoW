@@ -239,7 +239,6 @@ export class ProductsService {
     category?: string,
     search?: string
   ) {
-    // Fungsi ini sudah benar, ia hanya meneruskan parameter
     return this.findAll(page, limit, category, search, true);
   }
 }
