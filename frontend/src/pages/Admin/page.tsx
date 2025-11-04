@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                 Admin Mode
               </span>
               <span className="text-gray-700">
-                Welcome, {user?.firstName} {user?.lastName}
+                Welcome, {user?.firstName}
               </span>
               <button
                 onClick={handleLogout}
