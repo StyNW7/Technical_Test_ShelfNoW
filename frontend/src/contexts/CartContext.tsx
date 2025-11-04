@@ -1,16 +1,22 @@
+// Lokasi: frontend/src/contexts/CartContext.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { apiService, type Cart, type AddToCartRequest, type UpdateCartItemRequest } from '@/services/api';
+// 1. Impor CreateOrderRequest
+import { apiService, type Cart, type AddToCartRequest, type UpdateCartItemRequest, type CreateOrderRequest } from '@/services/api';
+import { useAuth } from './AuthContext'; // Impor useAuth
 
 interface CartContextType {
   cart: Cart | null;
   loading: boolean;
   error: string | null;
-  addToCart: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (productId: string, quantity: number, price: number) => Promise<void>;
   updateCartItem: (itemId: string, quantity: number) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
+  // ===== PERBAIKAN DI SINI (1) =====
+  checkout: (orderData: CreateOrderRequest) => Promise<any>; // Tambahkan fungsi checkout
+  // =============================
   cartItemCount: number;
   totalPrice: number;
   totalItems: number;
@@ -35,8 +41,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth(); // Dapatkan status autentikasi
 
   const refreshCart = async () => {
+    // Hanya refresh jika terotentikasi
+    if (!isAuthenticated) {
+      setCart(null);
+      setLoading(false);
+      return;
+    }
     try {
       setError(null);
       setLoading(true);
@@ -44,8 +57,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       setCart(cartData);
     } catch (err: any) {
       console.error('Error fetching cart:', err);
-      // Don't set error for 401 - user might not be logged in
-      if (err.message !== 'Authentication required') {
+      // Jangan set error untuk 401, AuthContext akan menanganinya
+      if (err.message !== 'Authentication required. Please login again.') {
         setError(err.message || 'Failed to load cart');
       }
     } finally {
@@ -53,14 +66,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
+  // Refresh keranjang saat status autentikasi berubah
   useEffect(() => {
     refreshCart();
-  }, []);
+  }, [isAuthenticated]);
 
-  const addToCart = async (productId: string, quantity: number) => {
+  const addToCart = async (productId: string, quantity: number, price: number) => {
     try {
       setError(null);
-      const cartData: AddToCartRequest = { productId, quantity };
+      const cartData: AddToCartRequest = { productId, quantity, price };
       const updatedCart = await apiService.addToCart(cartData);
       setCart(updatedCart);
     } catch (err: any) {
@@ -107,15 +121,36 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
-  // Calculate derived values from cart
+  // ===== PERBAIKAN DI SINI (2) =====
+  const checkout = async (orderData: CreateOrderRequest): Promise<any> => {
+    try {
+      setError(null);
+      // 1. Panggil API untuk membuat pesanan
+      const orderResponse = await apiService.createOrder(orderData);
+      
+      // 2. Refresh keranjang (yang sekarang seharusnya kosong)
+      await refreshCart();
+      
+      return orderResponse;
+    } catch (err: any) {
+      console.error('Error during checkout:', err);
+      setError(err.message || 'Checkout failed');
+      throw err;
+    }
+  };
+  // =============================
+
+  // Hitung nilai turunan dari keranjang
   const cartItemCount = cart?.totalItems || 0;
-  const totalPrice = cart?.totalItems || 0;
+  // Perbaikan: Gunakan reduce untuk total harga, bukan totalItems
+  const totalPrice = cart?.items?.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0;
   const totalItems = cart?.totalItems || 0;
   const items = cart?.items?.map(item => ({
     id: item.id,
     productId: item.productId,
-    bookTitle: item.product?.title || 'Unknown Book',
-    bookAuthor: item.product?.author || 'Unknown Author',
+    // Kita harus menangani jika produk tidak ada (meskipun seharusnya ada)
+    bookTitle: item.product?.title || 'Produk tidak tersedia',
+    bookAuthor: item.product?.author || 'N/A',
     bookImage: item.product?.imageUrl,
     price: item.price,
     quantity: item.quantity,
@@ -131,6 +166,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     removeFromCart,
     clearCart,
     refreshCart,
+    checkout, // Ekspor fungsi checkout
     cartItemCount,
     totalPrice,
     totalItems,

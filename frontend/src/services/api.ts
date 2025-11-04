@@ -1,3 +1,4 @@
+// Lokasi: frontend/src/services/api.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -96,13 +97,28 @@ export interface Cart {
   updatedAt: string;
 }
 
+// ===== PERBAIKAN DI SINI =====
 export interface AddToCartRequest {
   productId: string;
   quantity: number;
+  price: number; // Tambahkan price
 }
+// =============================
 
 export interface UpdateCartItemRequest {
   quantity: number;
+}
+
+export interface CreateOrderRequest {
+  paymentMethod: string;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  paymentDetails?: any;
 }
 
 class ApiService {

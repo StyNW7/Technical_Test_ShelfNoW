@@ -105,4 +105,10 @@ export class ProductsController {
     // Menggunakan findOne yang sudah ada karena service-nya sama
     return this.productsService.findOne(payload.id);
   }
+
+  @MessagePattern('products_get_by_ids')
+  async findByIds(@Payload() ids: string[]) {
+    return this.productsService.findByIds(ids);
+  }
+
 }

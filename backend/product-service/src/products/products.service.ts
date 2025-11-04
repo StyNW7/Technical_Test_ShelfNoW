@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException }
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Product } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
@@ -241,4 +242,18 @@ export class ProductsService {
   ) {
     return this.findAll(page, limit, category, search, true);
   }
+
+  async findByIds(ids: string[]): Promise<Product[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+    return this.prisma.product.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
 }

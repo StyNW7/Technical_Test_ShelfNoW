@@ -1,3 +1,4 @@
+// Lokasi: frontend/src/app/book/[id]/page.tsx (atau Book.tsx)
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
@@ -47,7 +48,11 @@ export default function BookDetailPage() {
     if (!book) return
     
     try {
-      await addToCart(book.id, quantity)
+      // ===== PERBAIKAN DI SINI =====
+      // Kirim book.price sebagai argumen ketiga
+      await addToCart(book.id, quantity, book.price)
+      // =============================
+      
       setShowAddedNotification(true)
       setTimeout(() => setShowAddedNotification(false), 3000)
     } catch (err: any) {

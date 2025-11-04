@@ -1,3 +1,4 @@
+// app/cart/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -7,16 +8,22 @@ import { useCart } from "@/contexts/CartContext"
 import { useAuth } from "@/contexts/AuthContext"
 import { ShoppingCart, ArrowLeft, Package, Loader2, LogIn } from "lucide-react"
 import { useNavigate } from "react-router"
+import { type CreateOrderRequest } from "@/services/api" 
 
 export default function CartPage() {
-  const { cart, loading, clearCart, refreshCart, items, totalPrice, totalItems } = useCart()
+  const { cart, loading, checkout, refreshCart, items, totalPrice, totalItems } = useCart()
   const { isAuthenticated } = useAuth()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    refreshCart()
-  }, [])
+    // Refresh only if authenticated
+    if(isAuthenticated) {
+      refreshCart()
+      console.log("Cart: ", cart)
+    }
+  }, [isAuthenticated])
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
@@ -26,13 +33,42 @@ export default function CartPage() {
     setShowCheckoutModal(true)
   }
 
-  const handleConfirmCheckout = async () => {
+  const handleConfirmCheckout = async (checkoutData: {
+    paymentMethod: string;
+    shippingAddress: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+    paymentDetails: {
+      bank?: string;
+      cardNumber?: string;
+      expiryDate?: string;
+      cvv?: string;
+    };
+  }) => {
     try {
-      await clearCart()
+      setCheckoutLoading(true)
+      
+      const orderData: CreateOrderRequest = {
+        paymentMethod: checkoutData.paymentMethod,
+        shippingAddress: checkoutData.shippingAddress,
+        paymentDetails: checkoutData.paymentDetails
+      };
+
+      // Call checkout function from context
+      await checkout(orderData);
+      
       setShowCheckoutModal(false)
       navigate('/order-confirmation')
+    
     } catch (error) {
       console.error('Error during checkout:', error)
+      // You might want to show an error message to the user here
+    } finally {
+      setCheckoutLoading(false)
     }
   }
 
@@ -90,7 +126,7 @@ export default function CartPage() {
 
   const isEmpty = !cart || items.length === 0
   const taxAmount = totalPrice * 0.1
-  const finalTotal = totalPrice * 1.1
+  const finalTotal = totalPrice + taxAmount
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
@@ -183,7 +219,7 @@ export default function CartPage() {
 
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Subtotal</span>
+                  <span className="text-gray-700">Items ({totalItems})</span>
                   <span className="font-bold">${totalPrice.toFixed(2)}</span>
                 </div>
 
@@ -193,12 +229,12 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Tax (estimated)</span>
+                  <span className="text-gray-700">Tax (10%)</span>
                   <span className="font-bold">${taxAmount.toFixed(2)}</span>
                 </div>
 
                 <div className="border-t-2 border-black pt-4 flex justify-between">
-                  <span className="font-bold uppercase">Total</span>
+                  <span className="font-bold uppercase text-lg">Total</span>
                   <span className="text-2xl font-bold">${finalTotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -237,6 +273,7 @@ export default function CartPage() {
         totalItems={totalItems}
         onConfirm={handleConfirmCheckout}
         onCancel={() => setShowCheckoutModal(false)}
+        loading={checkoutLoading}
       />
     </main>
   )
